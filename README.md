@@ -1,36 +1,126 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌟 Ukeslønn
 
-## Getting Started
+En familieapp for ukeslønn der barna kan krysse av oppgaver, samle penger og XP, og foreldre kan godkjenne, lage oppgaver og gi bonuspremier.
 
-First, run the development server:
+Bygget for Ludvig (7) og Josefine (9). Funker på telefon, iPad og PC.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## ✨ Funksjoner
+
+**For barn:**
+- Egen profil med PIN-innlogging og avatar
+- Se dagens oppgaver med belønning, ikon og farge
+- Trykk på en oppgave for å markere den som ferdig — venter på voksen
+- Se saldo, dagens og ukens inntjening
+- Samle XP og klatre i nivåer (Hjelper → Magisk Konge)
+- Se progresjon mot bonus-premier
+- Konfetti og animasjoner når oppgaver fullføres 🎉
+
+**For voksen:**
+- Godkjenn eller avvis oppgaver med ett trykk
+- Lag, rediger, slett oppgaver (daglig, ukentlig, engangs)
+- Tildel oppgaver til bestemt barn eller alle
+- Sett opp bonuspremier (X oppgaver/uka, Y kr/måneden, eller manuelle)
+- Følg saldoer og progresjon for hvert barn
+- Betal ut og nullstill saldo
+- Administrer profiler, navn, PIN, avatar
+
+## 🚀 Kom i gang
+
+### 1. Sett opp Supabase (gratis)
+
+1. Gå til [supabase.com](https://supabase.com) og opprett en konto
+2. Lag et nytt prosjekt (velg en region nær deg, f.eks. Stockholm/Frankfurt)
+3. Vent ~2 minutter mens prosjektet bygges
+4. Når det er klart: åpne **SQL Editor** i venstre meny
+5. Trykk **+ New query**, lim inn alt innholdet fra `supabase/schema.sql` og kjør (Run/⌘+Enter)
+
+Dette setter opp alle tabellene og legger inn standardprofiler for Mamma/Pappa, Ludvig og Josefine.
+
+### 2. Hent API-nøkler
+
+I Supabase: **Project Settings → API**
+
+Kopier:
+- **Project URL** (f.eks. `https://abc123.supabase.co`)
+- **anon public** key (lang tekst)
+
+### 3. Konfigurer appen
+
+Lag en fil som heter `.env.local` i prosjektmappen (kopier fra `.env.local.example`) og fyll inn:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://din-prosjekt.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=din-anon-key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 4. Start appen
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Åpne [http://localhost:3000](http://localhost:3000) i nettleseren.
 
-## Learn More
+## 🔐 Standard PIN-koder
 
-To learn more about Next.js, take a look at the following resources:
+Endre disse i appen via **Profiler**-siden!
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Mamma/Pappa**: `1234`
+- **Josefine**: `1111`
+- **Ludvig**: `2222`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🌐 Publisering på nett (valgfritt)
 
-## Deploy on Vercel
+For å bruke appen fra ulike enheter (telefon, iPad, andre PC-er) kan du legge den ut gratis på Vercel:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Lag konto på [vercel.com](https://vercel.com)
+2. Trykk **Add New → Project**
+3. Importer prosjektet (push først til GitHub, eller dra-og-slipp mappen)
+4. Sett miljøvariablene `NEXT_PUBLIC_SUPABASE_URL` og `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+5. Deploy! Du får en URL som `https://ukeslonn.vercel.app`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Da kan alle i familien åpne appen i nettleseren og logge inn med sin egen PIN.
+
+**Tips:** Legg URL-en til på hjem-skjermen på iPad/telefonen ("Legg til på Hjem-skjerm" i Safari) så ser det ut og oppfører seg som en ekte app.
+
+## 🎮 XP og nivåer
+
+Hver gang en oppgave godkjennes, får barnet XP basert på belønningen (1 XP per 10 øre, minimum 10 XP).
+
+Nivåene er:
+1. 🌱 Hjelper
+2. 🪴 Lærling
+3. ⭐ Stjernehjelper
+4. 🌟 Mester
+5. 🦸 Superhelt
+6. 🏆 Champion
+7. 🐉 Legende
+8. 🔥 Drage
+9. 🚀 Galakse-helt
+10. 👑 Magisk Konge
+
+## 🛠 Teknisk
+
+- **Frontend:** Next.js 16 (App Router), React 19, TypeScript
+- **Styling:** Tailwind CSS 4 + custom CSS
+- **Animasjon:** Framer Motion + canvas-confetti
+- **Database:** Supabase (PostgreSQL)
+- **Auth:** Egen PIN-løsning (lagret som tekst i db — fin for familiebruk, ikke produksjon)
+
+## 📝 Tips for foreldre
+
+- Start med 5-8 daglige oppgaver så barna ikke blir overveldet
+- Belønningene trenger ikke være store: 5-20 kr per oppgave fungerer fint
+- Bruk **Premier** til å motivere til langsiktig innsats:
+  - "10 oppgaver denne uka = 50 kr ekstra"
+  - "200 kr tjent denne måneden = kino-tur"
+  - Manuelle premier ("Tidenes ryddejobb" som du gir når det fortjenes)
+- Bruk **Utbetaling** når dere faktisk overfører penger — da nullstilles saldoen i appen
+- Hvis et barn glemmer å krysse av: voksen kan ikke godkjenne uten at det er "trykket". Få barnet til å trykke selv så lærer de rutinen.
+
+## 🐛 Problemer?
+
+- **"Setup mangler"-skjerm:** Du har ikke laget `.env.local` enda, eller har glemt å restarte serveren etter å ha laget den
+- **Ingen profiler vises:** Har du kjørt `schema.sql` i Supabase SQL Editor?
+- **Endringer vises ikke:** Last inn siden på nytt (oppgaver fra én enhet synkroniseres ikke automatisk til en annen — du må refreshe)
