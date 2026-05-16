@@ -1,8 +1,8 @@
 export type Role = "child" | "parent";
-export type Recurrence = "daily" | "weekly" | "once";
+export type Recurrence = "daily" | "weekly" | "once" | "days_of_week" | "interval";
 export type CompletionStatus = "pending" | "approved" | "rejected";
 export type BonusGoal = "tasks_count" | "amount" | "manual";
-export type BonusPeriod = "week" | "month" | "custom";
+export type BonusPeriod = "week" | "month" | "custom" | "period";
 
 export type Profile = {
   id: string;
@@ -26,6 +26,11 @@ export type Task = {
   icon: string;
   color: string;
   recurrence: Recurrence;
+  days_of_week: number[] | null;
+  interval_days: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  xp_value: number;
   assigned_to: string | null;
   active: boolean;
   sort_order: number;
@@ -84,4 +89,49 @@ export type Badge = {
   child_id: string;
   badge_type: string;
   earned_at: string;
+};
+
+export type CustodyPeriod = {
+  id: string;
+  child_id: string;
+  start_date: string;
+  end_date: string;
+  label: string | null;
+  closed: boolean;
+  created_at: string;
+};
+
+export type PeriodAchievement = {
+  id: string;
+  child_id: string;
+  period_id: string | null;
+  period_start: string;
+  period_end: string;
+  max_level: number;
+  xp_earned: number;
+  tasks_completed: number;
+  ore_earned: number;
+  reached_max: boolean;
+  created_at: string;
+};
+
+export type StreakReward = {
+  id: string;
+  child_id: string | null;
+  title: string;
+  description: string | null;
+  icon: string;
+  required_streak: number;
+  reward_ore: number;
+  active: boolean;
+  created_at: string;
+};
+
+export type StreakClaim = {
+  id: string;
+  streak_reward_id: string;
+  child_id: string;
+  streak_count: number;
+  reward_ore: number;
+  awarded_at: string;
 };

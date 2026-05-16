@@ -4,24 +4,44 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { clearActiveProfile, getActiveProfile } from "@/lib/auth";
-import type { Bonus, BonusClaim, Profile, Task, TaskCompletion } from "@/lib/types";
+import type {
+  Bonus,
+  BonusClaim,
+  CustodyPeriod,
+  PeriodAchievement,
+  Profile,
+  StreakReward,
+  Task,
+  TaskCompletion,
+} from "@/lib/types";
 import { formatKr, startOfMonth, startOfWeek, todayIso } from "@/lib/utils";
+import { describeRecurrence, getTaskState } from "@/lib/scheduling";
+import { getCurrentPeriod, isDateInWindow } from "@/lib/periods";
+import { getLevel, xpForTask } from "@/lib/levels";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import XpBar from "@/components/XpBar";
+import LevelsModal from "@/components/LevelsModal";
 import { celebrate } from "@/components/Celebrate";
 import SetupNotice from "@/components/SetupNotice";
 import { motion, AnimatePresence } from "framer-motion";
 
-type TaskState = "available" | "pending" | "approved" | "rejected";
+type TaskState = "available" | "pending" | "approved" | "rejected" | "locked";
 
 type TaskWithState = Task & {
   state: TaskState;
   completion?: TaskCompletion;
+  nextAvailableDate?: string;
 };
 
 export default function ChildPageWrapper() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-6xl animate-float">🌟</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center text-6xl animate-float">
+          🌟
+        </div>
+      }
+    >
       <ChildPage />
     </Suspense>
   );
@@ -35,8 +55,12 @@ function ChildPage() {
   const [completions, setCompletions] = useState<TaskCompletion[]>([]);
   const [bonuses, setBonuses] = useState<Bonus[]>([]);
   const [bonusClaims, setBonusClaims] = useState<BonusClaim[]>([]);
+  const [periods, setPeriods] = useState<CustodyPeriod[]>([]);
+  const [achievements, setAchievements] = useState<PeriodAchievement[]>([]);
+  const [streakRewards, setStreakRewards] = useState<StreakReward[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [showLevels, setShowLevels] = useState(false);
 
   const profileId = useMemo(() => {
     const fromQuery = search.get("p");
@@ -47,7 +71,7 @@ function ChildPage() {
 
   const loadAll = useCallback(async () => {
     if (!profileId) return;
-    const [pRes, tRes, cRes, bRes, bcRes] = await Promise.all([
+    const [pRes, tRes, cRes, bRes, bcRes, perRes, aRes, srRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", profileId).single(),
       supabase.from("tasks").select("*").eq("active", true).order("sort_order"),
       supabase
@@ -57,12 +81,22 @@ function ChildPage() {
         .order("completed_at", { ascending: false }),
       supabase.from("bonuses").select("*").eq("active", true),
       supabase.from("bonus_claims").select("*").eq("child_id", profileId),
+      supabase.from("custody_periods").select("*").eq("child_id", profileId),
+      supabase
+        .from("period_achievements")
+        .select("*")
+        .eq("child_id", profileId)
+        .order("period_end", { ascending: false }),
+      supabase.from("streak_rewards").select("*").eq("active", true),
     ]);
     if (pRes.data) setProfile(pRes.data as Profile);
     setTasks((tRes.data as Task[]) ?? []);
     setCompletions((cRes.data as TaskCompletion[]) ?? []);
     setBonuses((bRes.data as Bonus[]) ?? []);
     setBonusClaims((bcRes.data as BonusClaim[]) ?? []);
+    setPeriods((perRes.data as CustodyPeriod[]) ?? []);
+    setAchievements((aRes.data as PeriodAchievement[]) ?? []);
+    setStreakRewards((srRes.data as StreakReward[]) ?? []);
     setLoading(false);
   }, [profileId]);
 
@@ -82,23 +116,49 @@ function ChildPage() {
   const weekStart = startOfWeek().toISOString().slice(0, 10);
   const monthStart = startOfMonth().toISOString().slice(0, 10);
 
+  const currentPeriod = useMemo(() => {
+    if (!profileId) return null;
+    return getCurrentPeriod(periods, profileId);
+  }, [periods, profileId]);
+
+  // Periode-XP: kun XP fra fullføringer godkjent i nåværende periode
+  const periodXp = useMemo(() => {
+    if (!currentPeriod) return 0;
+    return completions
+      .filter(
+        (c) =>
+          c.status === "approved" &&
+          isDateInWindow(c.completion_date, currentPeriod)
+      )
+      .reduce((sum, c) => {
+        const task = tasks.find((t) => t.id === c.task_id);
+        return sum + xpForTask(task ?? { xp_value: 10 });
+      }, 0);
+  }, [completions, tasks, currentPeriod]);
+
+  // Aktiv strekk: hvor mange perioder på rad med max level
+  const currentStreak = useMemo(() => {
+    let streak = 0;
+    for (const a of achievements) {
+      if (a.reached_max) streak++;
+      else break;
+    }
+    if (getLevel(periodXp).isMax) streak += 1; // inkluder denne hvis vi er på max
+    return streak;
+  }, [achievements, periodXp]);
+
   const taskList: TaskWithState[] = useMemo(() => {
     return tasks
       .filter((t) => !t.assigned_to || t.assigned_to === profileId)
       .map((task) => {
-        const relevant = completions.filter((c) => c.task_id === task.id);
-        let active: TaskCompletion | undefined;
-        if (task.recurrence === "daily") {
-          active = relevant.find((c) => c.completion_date === today);
-        } else if (task.recurrence === "weekly") {
-          active = relevant.find((c) => c.completion_date >= weekStart);
-        } else {
-          active = relevant.find((c) => c.status !== "rejected");
-        }
-        const state: TaskState = active
-          ? (active.status as TaskState)
-          : "available";
-        return { ...task, state, completion: active };
+        const mine = completions.filter((c) => c.child_id === profileId);
+        const { state, completion, nextAvailableDate } = getTaskState(
+          task,
+          mine,
+          today,
+          weekStart
+        );
+        return { ...task, state, completion, nextAvailableDate };
       });
   }, [tasks, completions, profileId, today, weekStart]);
 
@@ -107,20 +167,24 @@ function ChildPage() {
       available: taskList.filter((t) => t.state === "available"),
       pending: taskList.filter((t) => t.state === "pending"),
       approved: taskList.filter((t) => t.state === "approved"),
+      locked: taskList.filter((t) => t.state === "locked"),
     };
   }, [taskList]);
 
-  const todayEarned = useMemo(() => {
-    return completions
-      .filter((c) => c.status === "approved" && c.completion_date === today)
-      .reduce((sum, c) => sum + c.reward_ore, 0);
-  }, [completions, today]);
+  const todayEarned = completions
+    .filter((c) => c.status === "approved" && c.completion_date === today)
+    .reduce((s, c) => s + c.reward_ore, 0);
 
-  const weekEarned = useMemo(() => {
+  const periodEarned = useMemo(() => {
+    if (!currentPeriod) return 0;
     return completions
-      .filter((c) => c.status === "approved" && c.completion_date >= weekStart)
-      .reduce((sum, c) => sum + c.reward_ore, 0);
-  }, [completions, weekStart]);
+      .filter(
+        (c) =>
+          c.status === "approved" &&
+          isDateInWindow(c.completion_date, currentPeriod)
+      )
+      .reduce((s, c) => s + c.reward_ore, 0);
+  }, [completions, currentPeriod]);
 
   const claimTask = async (task: TaskWithState) => {
     if (!profile || task.state !== "available") return;
@@ -155,14 +219,24 @@ function ChildPage() {
     (bonus: Bonus) => {
       if (bonus.target_child_id && bonus.target_child_id !== profileId) return null;
       const periodStart =
-        bonus.period === "week" ? weekStart : bonus.period === "month" ? monthStart : bonus.start_date;
-      const ends = bonus.end_date;
-      const inRange = (date: string) => date >= periodStart && (!ends || date <= ends);
+        bonus.period === "week"
+          ? weekStart
+          : bonus.period === "month"
+          ? monthStart
+          : bonus.period === "period"
+          ? currentPeriod?.start ?? weekStart
+          : bonus.start_date;
+      const ends =
+        bonus.period === "period" ? currentPeriod?.end ?? null : bonus.end_date;
+      const inRange = (date: string) =>
+        date >= periodStart && (!ends || date <= ends);
 
       let progress = 0;
       let goal = bonus.goal_value ?? 1;
       if (bonus.goal_type === "tasks_count") {
-        progress = completions.filter((c) => c.status === "approved" && inRange(c.completion_date)).length;
+        progress = completions.filter(
+          (c) => c.status === "approved" && inRange(c.completion_date)
+        ).length;
       } else if (bonus.goal_type === "amount") {
         progress = completions
           .filter((c) => c.status === "approved" && inRange(c.completion_date))
@@ -178,7 +252,7 @@ function ChildPage() {
       );
       return { progress, goal, pct, claimed };
     },
-    [completions, bonusClaims, profileId, weekStart, monthStart]
+    [completions, bonusClaims, profileId, weekStart, monthStart, currentPeriod]
   );
 
   if (!isSupabaseConfigured) return <SetupNotice />;
@@ -214,29 +288,89 @@ function ChildPage() {
             <div className="text-3xl font-extrabold">{formatKr(profile.balance_ore)}</div>
           </div>
         </div>
-        <div className="flex items-center gap-3 mb-4">
-          <ProfileAvatar emoji={profile.avatar_emoji} color={profile.avatar_color} size="md" className="ring-4 ring-white/40" />
-          <div>
+        <div className="flex items-center gap-3 mb-3">
+          <ProfileAvatar
+            emoji={profile.avatar_emoji}
+            color={profile.avatar_color}
+            size="md"
+            className="ring-4 ring-white/40"
+          />
+          <div className="flex-1">
             <div className="text-xs opacity-80 font-medium">Hei!</div>
             <div className="text-2xl font-extrabold">{profile.name}</div>
+            {currentPeriod && (
+              <div className="text-[11px] opacity-80 font-medium">
+                📅 {currentPeriod.label}
+              </div>
+            )}
           </div>
         </div>
+
         <div className="bg-white/20 backdrop-blur rounded-2xl p-3">
-          <XpBar xp={profile.xp} color={profile.avatar_color} />
+          <XpBar
+            xp={periodXp}
+            color={profile.avatar_color}
+            variant="dark"
+            onClick={() => setShowLevels(true)}
+          />
         </div>
-        <div className="grid grid-cols-2 gap-2 mt-3 text-center">
+
+        <div className="grid grid-cols-3 gap-2 mt-3 text-center">
           <div className="bg-white/20 backdrop-blur rounded-2xl py-2">
             <div className="text-xs opacity-80">I dag</div>
             <div className="font-extrabold">{formatKr(todayEarned)}</div>
           </div>
           <div className="bg-white/20 backdrop-blur rounded-2xl py-2">
-            <div className="text-xs opacity-80">Denne uka</div>
-            <div className="font-extrabold">{formatKr(weekEarned)}</div>
+            <div className="text-xs opacity-80">Periode</div>
+            <div className="font-extrabold">{formatKr(periodEarned)}</div>
+          </div>
+          <div className="bg-white/20 backdrop-blur rounded-2xl py-2">
+            <div className="text-xs opacity-80">🔥 Strekk</div>
+            <div className="font-extrabold">{currentStreak}</div>
           </div>
         </div>
       </div>
 
       <div className="px-5 mt-6 space-y-6">
+        {/* Strekk-info */}
+        {streakRewards.length > 0 && (
+          <section>
+            {streakRewards
+              .filter((s) => !s.child_id || s.child_id === profileId)
+              .map((s) => {
+                const remaining = Math.max(0, s.required_streak - currentStreak);
+                const pct = Math.min(
+                  100,
+                  (currentStreak / s.required_streak) * 100
+                );
+                return (
+                  <div
+                    key={s.id}
+                    className="card p-4 bg-gradient-to-r from-orange-100 to-pink-100"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="text-4xl">{s.icon}</div>
+                      <div className="flex-1">
+                        <div className="font-extrabold text-purple-900">{s.title}</div>
+                        <div className="text-xs text-purple-700 font-semibold">
+                          {remaining === 0
+                            ? "OPPNÅDD! 🎉"
+                            : `${remaining} periode${remaining > 1 ? "r" : ""} igjen for å sikre ${formatKr(s.reward_ore)}`}
+                        </div>
+                        <div className="h-2 bg-white/60 rounded-full overflow-hidden mt-1">
+                          <div
+                            className="h-full bg-gradient-to-r from-orange-500 to-pink-500"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </section>
+        )}
+
         {/* Bonuser */}
         {bonuses.length > 0 && (
           <section>
@@ -288,7 +422,10 @@ function ChildPage() {
         {/* Klare oppgaver */}
         <section>
           <h3 className="font-extrabold text-purple-900 text-lg mb-2 flex items-center gap-2">
-            🎯 Oppgaver i dag <span className="text-purple-400 text-sm font-medium">({groupedTasks.available.length})</span>
+            🎯 Oppgaver i dag{" "}
+            <span className="text-purple-400 text-sm font-medium">
+              ({groupedTasks.available.length})
+            </span>
           </h3>
           {groupedTasks.available.length === 0 ? (
             <div className="card p-6 text-center">
@@ -318,16 +455,22 @@ function ChildPage() {
                       {t.icon}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-extrabold text-purple-900 truncate">{t.title}</div>
+                      <div className="font-extrabold text-purple-900 truncate">
+                        {t.title}
+                      </div>
                       {t.description && (
-                        <div className="text-xs text-purple-500 truncate">{t.description}</div>
+                        <div className="text-xs text-purple-500 truncate">
+                          {t.description}
+                        </div>
                       )}
                       <div className="text-[11px] font-bold uppercase tracking-wider text-purple-400 mt-0.5">
-                        {t.recurrence === "daily" ? "Hver dag" : t.recurrence === "weekly" ? "Hver uke" : "Engangs"}
+                        {describeRecurrence(t)} · {t.xp_value} XP
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-amber-600 font-extrabold text-lg">{formatKr(t.reward_ore)}</div>
+                      <div className="text-amber-600 font-extrabold text-lg">
+                        {formatKr(t.reward_ore)}
+                      </div>
                       <div className="text-xs text-purple-400 font-semibold">Trykk!</div>
                     </div>
                   </motion.button>
@@ -341,17 +484,25 @@ function ChildPage() {
         {groupedTasks.pending.length > 0 && (
           <section>
             <h3 className="font-extrabold text-purple-900 text-lg mb-2 flex items-center gap-2">
-              ⏳ Venter på godkjenning <span className="text-purple-400 text-sm font-medium">({groupedTasks.pending.length})</span>
+              ⏳ Venter på godkjenning{" "}
+              <span className="text-purple-400 text-sm font-medium">
+                ({groupedTasks.pending.length})
+              </span>
             </h3>
             <div className="grid gap-2">
               {groupedTasks.pending.map((t) => (
                 <div key={t.id} className="card p-3 flex items-center gap-3 opacity-90">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: `${t.color}33` }}>
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                    style={{ background: `${t.color}33` }}
+                  >
                     {t.icon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-purple-900 truncate">{t.title}</div>
-                    <div className="text-xs text-amber-600 font-semibold">Venter på voksen...</div>
+                    <div className="text-xs text-amber-600 font-semibold">
+                      Venter på voksen...
+                    </div>
                   </div>
                   <div className="text-amber-600 font-bold">{formatKr(t.reward_ore)}</div>
                   <button
@@ -370,25 +521,69 @@ function ChildPage() {
         {groupedTasks.approved.length > 0 && (
           <section>
             <h3 className="font-extrabold text-purple-900 text-lg mb-2 flex items-center gap-2">
-              ✅ Ferdig <span className="text-purple-400 text-sm font-medium">({groupedTasks.approved.length})</span>
+              ✅ Ferdig{" "}
+              <span className="text-purple-400 text-sm font-medium">
+                ({groupedTasks.approved.length})
+              </span>
             </h3>
             <div className="grid gap-2">
               {groupedTasks.approved.map((t) => (
-                <div key={t.id} className="card p-3 flex items-center gap-3 bg-gradient-to-r from-green-50 to-white">
+                <div
+                  key={t.id}
+                  className="card p-3 flex items-center gap-3 bg-gradient-to-r from-green-50 to-white"
+                >
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 bg-green-100">
                     {t.icon}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-purple-900 truncate line-through opacity-70">{t.title}</div>
+                    <div className="font-bold text-purple-900 truncate line-through opacity-70">
+                      {t.title}
+                    </div>
                     <div className="text-xs text-green-600 font-semibold">✓ Godkjent</div>
                   </div>
-                  <div className="text-green-600 font-extrabold">+{formatKr(t.reward_ore)}</div>
+                  <div className="text-green-600 font-extrabold">
+                    +{formatKr(t.reward_ore)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Låst (ikke tilgjengelig akkurat nå) */}
+        {groupedTasks.locked.length > 0 && (
+          <section>
+            <h3 className="font-extrabold text-purple-900 text-lg mb-2 flex items-center gap-2">
+              🔒 Kommer senere{" "}
+              <span className="text-purple-400 text-sm font-medium">
+                ({groupedTasks.locked.length})
+              </span>
+            </h3>
+            <div className="grid gap-2">
+              {groupedTasks.locked.map((t) => (
+                <div key={t.id} className="card p-3 flex items-center gap-3 opacity-60">
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 grayscale"
+                    style={{ background: `${t.color}33` }}
+                  >
+                    {t.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-purple-900 truncate">{t.title}</div>
+                    <div className="text-xs text-purple-500 font-medium">
+                      {describeRecurrence(t)}
+                      {t.nextAvailableDate && ` · neste: ${t.nextAvailableDate}`}
+                    </div>
+                  </div>
+                  <div className="text-purple-400 font-bold">{formatKr(t.reward_ore)}</div>
                 </div>
               ))}
             </div>
           </section>
         )}
       </div>
+
+      {showLevels && <LevelsModal xp={periodXp} onClose={() => setShowLevels(false)} />}
     </div>
   );
 }

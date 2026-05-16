@@ -10,17 +10,25 @@ Bygget for Ludvig (7) og Josefine (9). Funker på telefon, iPad og PC.
 - Egen profil med PIN-innlogging og avatar
 - Se dagens oppgaver med belønning, ikon og farge
 - Trykk på en oppgave for å markere den som ferdig — venter på voksen
-- Se saldo, dagens og ukens inntjening
-- Samle XP og klatre i nivåer (Hjelper → Magisk Konge)
-- Se progresjon mot bonus-premier
+- Se saldo, dagens og periodens inntjening
+- Samle XP og klatre i nivåer 1-10 (Hjelper → Magisk Konge) — **nullstilles hver periode**
+- Trykk på XP-baren for å se alle 10 nivåer og hvor mye som gjenstår til Level 10
+- Se progresjon mot bonus-premier og strekk-bonuser 🔥
 - Konfetti og animasjoner når oppgaver fullføres 🎉
 
 **For voksen:**
 - Godkjenn eller avvis oppgaver med ett trykk
-- Lag, rediger, slett oppgaver (daglig, ukentlig, engangs)
-- Tildel oppgaver til bestemt barn eller alle
-- Sett opp bonuspremier (X oppgaver/uka, Y kr/måneden, eller manuelle)
-- Følg saldoer og progresjon for hvert barn
+- Lag, rediger, slett oppgaver med fleksibel hyppighet:
+  - Hver dag
+  - Valgte ukedager (f.eks. bare hverdager eller bare helger)
+  - Hver N. dag (annenhver dag osv.)
+  - Engangs eller ukentlig
+  - Med valgfri start- og slutt-dato
+- Sett egen XP-verdi per oppgave (default 10 XP)
+- **Custody-perioder:** registrer datoer barna er hos deg (f.eks. fre→ons = 13 dager). XP og bonuser regnes per periode i stedet for kalenderuke.
+- Sett opp bonuspremier (X oppgaver/perioden, Y kr/uka, eller manuelle)
+- **Strekk-bonuser:** Premier for å nå Level 10 i flere perioder på rad
+- Følg saldoer, periodebasert XP og strekk for hvert barn
 - Betal ut og nullstill saldo
 - Administrer profiler, navn, PIN, avatar
 
@@ -33,6 +41,7 @@ Bygget for Ludvig (7) og Josefine (9). Funker på telefon, iPad og PC.
 3. Vent ~2 minutter mens prosjektet bygges
 4. Når det er klart: åpne **SQL Editor** i venstre meny
 5. Trykk **+ New query**, lim inn alt innholdet fra `supabase/schema.sql` og kjør (Run/⌘+Enter)
+6. **Hvis du oppgraderer fra v1**: kjør også `supabase/migration_v2.sql` for å legge til fleksibel hyppighet, perioder og strekk-bonus.
 
 Dette setter opp alle tabellene og legger inn standardprofiler for Mamma/Pappa, Ludvig og Josefine.
 
@@ -86,7 +95,12 @@ Da kan alle i familien åpne appen i nettleseren og logge inn med sin egen PIN.
 
 ## 🎮 XP og nivåer
 
-Hver gang en oppgave godkjennes, får barnet XP basert på belønningen (1 XP per 10 øre, minimum 10 XP).
+XP regnes **per periode** (besøk eller kalenderuke) og nullstilles når en periode avsluttes.
+Hver godkjent oppgave gir 10 XP (kan justeres per oppgave).
+
+**Balansering** — beregnet for et typisk besøk på en uke:
+- Minimum (3 oppg × 5 hverdager + 2 oppg × 2 helgedager = 19 oppgaver) → ~Level 7 (Legende)
+- For å nå Level 10 (Magisk Konge) trengs ~28 oppgaver i perioden
 
 Nivåene er:
 1. 🌱 Hjelper
@@ -107,6 +121,26 @@ Nivåene er:
 - **Animasjon:** Framer Motion + canvas-confetti
 - **Database:** Supabase (PostgreSQL)
 - **Auth:** Egen PIN-løsning (lagret som tekst i db — fin for familiebruk, ikke produksjon)
+
+## 📅 Custody-perioder
+
+Hvis barna er hos deg deler av tiden (f.eks. annenhver uke eller fra fredag til onsdag = 13 dager), opprett en **periode** under fanen "Perioder":
+
+1. Velg barn, start- og slutt-dato, og evt. en etikett ("Uke 19")
+2. Når barnet er hos deg, vises perioden som "AKTIV"
+3. XP og nivå regnes for den aktive perioden
+4. Etter perioden er over, trykk **"Avslutt og lås inn"** — dette låser inn Level-resultatet, øker strekk-telleren hvis Level 10 ble nådd, og starter på 0 XP når en ny periode begynner
+5. Lag perioder for hvert besøk fremover så er du klar
+
+Hvis du ikke bruker perioder, brukes vanlig kalenderuke (man-søn) automatisk.
+
+## 🔥 Strekk-bonus
+
+For å motivere til langsiktig innsats:
+1. Gå til "Strekk"-fanen
+2. Standardbonusen "3-på-rad-bonus" er allerede satt opp — gir 50 kr hvis barnet når Level 10 i 3 perioder på rad
+3. Lag flere etter ønske (5-på-rad, 10-på-rad, osv.)
+4. Når kravet er nådd, kan du gi bonusen med ett trykk
 
 ## 📝 Tips for foreldre
 

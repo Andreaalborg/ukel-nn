@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import type { Profile, Recurrence, Task } from "@/lib/types";
 import { formatKr, kronerToOre } from "@/lib/utils";
+import { describeRecurrence, DAY_NAMES } from "@/lib/scheduling";
 import { ColorPicker, EmojiPicker } from "@/components/EmojiPicker";
 import SetupNotice from "@/components/SetupNotice";
 import { AnimatePresence, motion } from "framer-motion";
@@ -13,9 +14,14 @@ type Draft = {
   title: string;
   description: string;
   reward_kr: number;
+  xp_value: number;
   icon: string;
   color: string;
   recurrence: Recurrence;
+  days_of_week: number[];
+  interval_days: number;
+  start_date: string;
+  end_date: string;
   assigned_to: string | null;
   active: boolean;
 };
@@ -23,10 +29,15 @@ type Draft = {
 const EMPTY: Draft = {
   title: "",
   description: "",
-  reward_kr: 10,
+  reward_kr: 5,
+  xp_value: 10,
   icon: "⭐",
   color: "#FFD93D",
   recurrence: "daily",
+  days_of_week: [1, 2, 3, 4, 5],
+  interval_days: 2,
+  start_date: "",
+  end_date: "",
   assigned_to: null,
   active: true,
 };
@@ -61,9 +72,14 @@ export default function TasksPage() {
       title: editing.title.trim(),
       description: editing.description.trim() || null,
       reward_ore: kronerToOre(editing.reward_kr),
+      xp_value: Math.max(1, editing.xp_value),
       icon: editing.icon,
       color: editing.color,
       recurrence: editing.recurrence,
+      days_of_week: editing.recurrence === "days_of_week" ? editing.days_of_week : null,
+      interval_days: editing.recurrence === "interval" ? editing.interval_days : null,
+      start_date: editing.start_date || null,
+      end_date: editing.end_date || null,
       assigned_to: editing.assigned_to,
       active: editing.active,
     };
@@ -97,7 +113,9 @@ export default function TasksPage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-extrabold text-purple-900">Oppgaver</h1>
-          <p className="text-purple-600 font-medium text-sm">Lag, rediger og slett oppgaver</p>
+          <p className="text-purple-600 font-medium text-sm">
+            Lag, rediger og slett oppgaver
+          </p>
         </div>
         <button onClick={() => setEditing({ ...EMPTY })} className="btn-primary">
           + Ny
@@ -124,8 +142,7 @@ export default function TasksPage() {
               <div className="flex-1 min-w-0">
                 <div className="font-extrabold text-purple-900 truncate">{t.title}</div>
                 <div className="text-xs text-purple-500">
-                  {formatKr(t.reward_ore)} ·{" "}
-                  {t.recurrence === "daily" ? "Hver dag" : t.recurrence === "weekly" ? "Hver uke" : "Engangs"}
+                  {formatKr(t.reward_ore)} · {t.xp_value} XP · {describeRecurrence(t)}
                   {t.assigned_to && ` · ${kids.find((k) => k.id === t.assigned_to)?.name ?? ""}`}
                 </div>
               </div>
@@ -144,9 +161,14 @@ export default function TasksPage() {
                     title: t.title,
                     description: t.description ?? "",
                     reward_kr: t.reward_ore / 100,
+                    xp_value: t.xp_value ?? 10,
                     icon: t.icon,
                     color: t.color,
                     recurrence: t.recurrence,
+                    days_of_week: t.days_of_week ?? [1, 2, 3, 4, 5],
+                    interval_days: t.interval_days ?? 2,
+                    start_date: t.start_date ?? "",
+                    end_date: t.end_date ?? "",
                     assigned_to: t.assigned_to,
                     active: t.active,
                   })
@@ -196,8 +218,27 @@ function TaskEditor({
   onChange: (d: Draft) => void;
   onSave: () => void;
 }) {
+  const toggleDay = (d: number) => {
+    const has = draft.days_of_week.includes(d);
+    onChange({
+      ...draft,
+      days_of_week: has
+        ? draft.days_of_week.filter((x) => x !== d)
+        : [...draft.days_of_week, d].sort(),
+    });
+  };
+
+  const presetDays = (label: "weekdays" | "weekends" | "all") => {
+    const days =
+      label === "weekdays" ? [1, 2, 3, 4, 5] : label === "weekends" ? [0, 6] : [0, 1, 2, 3, 4, 5, 6];
+    onChange({ ...draft, days_of_week: days });
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
+      onClick={onClose}
+    >
       <motion.div
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -205,8 +246,12 @@ function TaskEditor({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-extrabold text-purple-900">{draft.id ? "Rediger" : "Ny oppgave"}</h2>
-          <button onClick={onClose} className="text-2xl text-purple-400">✕</button>
+          <h2 className="text-xl font-extrabold text-purple-900">
+            {draft.id ? "Rediger" : "Ny oppgave"}
+          </h2>
+          <button onClick={onClose} className="text-2xl text-purple-400">
+            ✕
+          </button>
         </div>
 
         <label className="block text-sm font-bold text-purple-700 mb-1">Navn</label>
@@ -218,7 +263,9 @@ function TaskEditor({
           className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 focus:border-purple-500 outline-none mb-3"
         />
 
-        <label className="block text-sm font-bold text-purple-700 mb-1">Beskrivelse (valgfritt)</label>
+        <label className="block text-sm font-bold text-purple-700 mb-1">
+          Beskrivelse (valgfritt)
+        </label>
         <input
           type="text"
           value={draft.description}
@@ -228,7 +275,9 @@ function TaskEditor({
 
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div>
-            <label className="block text-sm font-bold text-purple-700 mb-1">Belønning (kr)</label>
+            <label className="block text-sm font-bold text-purple-700 mb-1">
+              Belønning (kr)
+            </label>
             <input
               type="number"
               min={0}
@@ -239,18 +288,125 @@ function TaskEditor({
             />
           </div>
           <div>
-            <label className="block text-sm font-bold text-purple-700 mb-1">Hyppighet</label>
-            <select
-              value={draft.recurrence}
-              onChange={(e) => onChange({ ...draft, recurrence: e.target.value as Recurrence })}
-              className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 focus:border-purple-500 outline-none bg-white"
-            >
-              <option value="daily">Hver dag</option>
-              <option value="weekly">Hver uke</option>
-              <option value="once">Engangs</option>
-            </select>
+            <label className="block text-sm font-bold text-purple-700 mb-1">
+              XP for oppgaven
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={draft.xp_value}
+              onChange={(e) => onChange({ ...draft, xp_value: Number(e.target.value) })}
+              className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 focus:border-purple-500 outline-none"
+            />
           </div>
         </div>
+
+        <label className="block text-sm font-bold text-purple-700 mb-1">Hyppighet</label>
+        <select
+          value={draft.recurrence}
+          onChange={(e) => onChange({ ...draft, recurrence: e.target.value as Recurrence })}
+          className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 focus:border-purple-500 outline-none bg-white mb-3"
+        >
+          <option value="daily">Hver dag</option>
+          <option value="days_of_week">Valgte dager</option>
+          <option value="weekly">Én gang i uken (når som helst)</option>
+          <option value="interval">Hver N. dag (intervall)</option>
+          <option value="once">Kun én gang</option>
+        </select>
+
+        {draft.recurrence === "days_of_week" && (
+          <div className="mb-3 bg-purple-50 rounded-2xl p-3">
+            <div className="flex gap-1.5 mb-2">
+              <button
+                type="button"
+                onClick={() => presetDays("weekdays")}
+                className="text-xs font-bold px-2 py-1 rounded-full bg-white border border-purple-200"
+              >
+                Hverdager
+              </button>
+              <button
+                type="button"
+                onClick={() => presetDays("weekends")}
+                className="text-xs font-bold px-2 py-1 rounded-full bg-white border border-purple-200"
+              >
+                Helger
+              </button>
+              <button
+                type="button"
+                onClick={() => presetDays("all")}
+                className="text-xs font-bold px-2 py-1 rounded-full bg-white border border-purple-200"
+              >
+                Alle
+              </button>
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {[1, 2, 3, 4, 5, 6, 0].map((day) => {
+                const selected = draft.days_of_week.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleDay(day)}
+                    className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                      selected
+                        ? "bg-purple-600 text-white"
+                        : "bg-white text-purple-600 border border-purple-200"
+                    }`}
+                  >
+                    {DAY_NAMES[day]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {draft.recurrence === "interval" && (
+          <div className="mb-3 bg-purple-50 rounded-2xl p-3">
+            <label className="block text-sm font-bold text-purple-700 mb-1">
+              Tilgjengelig hver N. dag (f.eks. 2 = annenhver dag)
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={draft.interval_days}
+              onChange={(e) =>
+                onChange({ ...draft, interval_days: Math.max(1, Number(e.target.value)) })
+              }
+              className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 outline-none bg-white"
+            />
+          </div>
+        )}
+
+        <details className="mb-3">
+          <summary className="text-sm font-bold text-purple-700 cursor-pointer select-none">
+            ⏱️ Begrenset periode (valgfritt)
+          </summary>
+          <div className="grid grid-cols-2 gap-3 mt-2 bg-purple-50 rounded-2xl p-3">
+            <div>
+              <label className="block text-xs font-bold text-purple-700 mb-1">
+                Start-dato
+              </label>
+              <input
+                type="date"
+                value={draft.start_date}
+                onChange={(e) => onChange({ ...draft, start_date: e.target.value })}
+                className="w-full px-2 py-1.5 rounded-lg border-2 border-purple-200 outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-purple-700 mb-1">
+                Slutt-dato
+              </label>
+              <input
+                type="date"
+                value={draft.end_date}
+                onChange={(e) => onChange({ ...draft, end_date: e.target.value })}
+                className="w-full px-2 py-1.5 rounded-lg border-2 border-purple-200 outline-none text-sm"
+              />
+            </div>
+          </div>
+        </details>
 
         <label className="block text-sm font-bold text-purple-700 mb-1">For hvem?</label>
         <select
@@ -268,15 +424,23 @@ function TaskEditor({
 
         <label className="block text-sm font-bold text-purple-700 mb-1">Ikon</label>
         <div className="mb-3">
-          <EmojiPicker value={draft.icon} onChange={(v) => onChange({ ...draft, icon: v })} type="task" />
+          <EmojiPicker
+            value={draft.icon}
+            onChange={(v) => onChange({ ...draft, icon: v })}
+            type="task"
+          />
         </div>
 
         <label className="block text-sm font-bold text-purple-700 mb-2">Farge</label>
         <ColorPicker value={draft.color} onChange={(v) => onChange({ ...draft, color: v })} />
 
         <div className="flex gap-2 mt-6">
-          <button onClick={onClose} className="btn-ghost flex-1">Avbryt</button>
-          <button onClick={onSave} className="btn-primary flex-1">{draft.id ? "Lagre" : "Opprett"}</button>
+          <button onClick={onClose} className="btn-ghost flex-1">
+            Avbryt
+          </button>
+          <button onClick={onSave} className="btn-primary flex-1">
+            {draft.id ? "Lagre" : "Opprett"}
+          </button>
         </div>
       </motion.div>
     </div>

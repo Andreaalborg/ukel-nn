@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import type { Bonus, BonusGoal, BonusPeriod, Profile } from "@/lib/types";
+import type { Bonus, BonusGoal, BonusPeriod, CustodyPeriod, Profile } from "@/lib/types";
 import { formatKr, kronerToOre, startOfMonth, startOfWeek } from "@/lib/utils";
+import { getCurrentPeriod } from "@/lib/periods";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import SetupNotice from "@/components/SetupNotice";
 import { AnimatePresence, motion } from "framer-motion";
@@ -42,21 +43,24 @@ export default function BonusPage() {
   const [kids, setKids] = useState<Profile[]>([]);
   const [completions, setCompletions] = useState<{ child_id: string; reward_ore: number; completion_date: string; status: string }[]>([]);
   const [claims, setClaims] = useState<{ id: string; bonus_id: string; child_id: string; claimed_at: string; status: string }[]>([]);
+  const [custodyPeriods, setCustodyPeriods] = useState<CustodyPeriod[]>([]);
   const [editing, setEditing] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyClaim, setBusyClaim] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    const [bRes, kRes, cRes, clRes] = await Promise.all([
+    const [bRes, kRes, cRes, clRes, pRes] = await Promise.all([
       supabase.from("bonuses").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
       supabase.from("task_completions").select("child_id, reward_ore, completion_date, status").eq("status", "approved"),
       supabase.from("bonus_claims").select("id, bonus_id, child_id, claimed_at, status"),
+      supabase.from("custody_periods").select("*"),
     ]);
     setBonuses((bRes.data as Bonus[]) ?? []);
     setKids((kRes.data as Profile[]) ?? []);
     setCompletions((cRes.data as never) ?? []);
     setClaims((clRes.data as never) ?? []);
+    setCustodyPeriods((pRes.data as CustodyPeriod[]) ?? []);
     setLoading(false);
   }, []);
 
@@ -122,9 +126,22 @@ export default function BonusPage() {
   const getProgress = (bonus: Bonus, kidId: string) => {
     const weekStart = startOfWeek().toISOString().slice(0, 10);
     const monthStart = startOfMonth().toISOString().slice(0, 10);
+    const custody = bonus.period === "period" ? getCurrentPeriod(custodyPeriods, kidId) : null;
     const periodStart =
-      bonus.period === "week" ? weekStart : bonus.period === "month" ? monthStart : bonus.start_date;
-    const filtered = completions.filter((c) => c.child_id === kidId && c.completion_date >= periodStart);
+      bonus.period === "week"
+        ? weekStart
+        : bonus.period === "month"
+        ? monthStart
+        : bonus.period === "period"
+        ? custody?.start ?? weekStart
+        : bonus.start_date;
+    const periodEnd = bonus.period === "period" ? custody?.end : null;
+    const filtered = completions.filter(
+      (c) =>
+        c.child_id === kidId &&
+        c.completion_date >= periodStart &&
+        (!periodEnd || c.completion_date <= periodEnd)
+    );
     let progress = 0;
     const goal = bonus.goal_value ?? 1;
     if (bonus.goal_type === "tasks_count") {
@@ -173,7 +190,7 @@ export default function BonusPage() {
                     {b.description && <div className="text-xs text-purple-500">{b.description}</div>}
                     <div className="text-amber-600 font-extrabold mt-1">{formatKr(b.reward_ore)}</div>
                     <div className="text-xs text-purple-500 font-medium">
-                      {b.period === "week" ? "Denne uka" : b.period === "month" ? "Denne måneden" : "Egen periode"}
+                      {b.period === "week" ? "Denne uka" : b.period === "month" ? "Denne måneden" : b.period === "period" ? "Per besøk" : "Egen periode"}
                       {" · "}
                       {b.goal_type === "tasks_count"
                         ? `${b.goal_value ?? 0} oppgaver`
@@ -339,7 +356,8 @@ function BonusEditor({
               onChange={(e) => onChange({ ...draft, period: e.target.value as BonusPeriod })}
               className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 focus:border-purple-500 outline-none bg-white"
             >
-              <option value="week">Ukentlig</option>
+              <option value="period">Per besøksperiode</option>
+              <option value="week">Ukentlig (man-søn)</option>
               <option value="month">Månedlig</option>
               <option value="custom">Egen</option>
             </select>

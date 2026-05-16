@@ -8,7 +8,9 @@ import { clearActiveProfile, getActiveProfile } from "@/lib/auth";
 const NAV = [
   { href: "/forelder", label: "Hjem", icon: "🏠" },
   { href: "/forelder/oppgaver", label: "Oppgaver", icon: "📝" },
+  { href: "/forelder/perioder", label: "Perioder", icon: "📅" },
   { href: "/forelder/bonus", label: "Premier", icon: "🏆" },
+  { href: "/forelder/strekk", label: "Strekk", icon: "🔥" },
   { href: "/forelder/utbetaling", label: "Utbetaling", icon: "💰" },
   { href: "/forelder/profiler", label: "Profiler", icon: "👥" },
 ];
@@ -65,17 +67,17 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
       </aside>
 
       {/* Mobile bottom nav */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-purple-100 px-2 py-1 grid grid-cols-5 z-40">
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-purple-100 px-1 py-1 grid grid-cols-7 z-40">
         {NAV.map((n) => (
           <Link
             key={n.href}
             href={n.href}
-            className={`flex flex-col items-center gap-0.5 py-2 rounded-lg text-[10px] font-bold ${
+            className={`flex flex-col items-center gap-0.5 py-2 rounded-lg text-[9px] font-bold ${
               path === n.href ? "text-purple-700" : "text-purple-400"
             }`}
           >
-            <span className="text-xl">{n.icon}</span>
-            <span>{n.label}</span>
+            <span className="text-lg">{n.icon}</span>
+            <span className="leading-tight">{n.label}</span>
           </Link>
         ))}
       </nav>

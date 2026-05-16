@@ -2,9 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import type { BonusClaim, Profile, Task, TaskCompletion } from "@/lib/types";
+import type {
+  BonusClaim,
+  CustodyPeriod,
+  PeriodAchievement,
+  Profile,
+  StreakReward,
+  Task,
+  TaskCompletion,
+} from "@/lib/types";
 import { formatKr, greeting, startOfWeek, todayIso } from "@/lib/utils";
-import { xpForReward } from "@/lib/levels";
+import { xpForTask, getLevel } from "@/lib/levels";
+import { getCurrentPeriod, isDateInWindow } from "@/lib/periods";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import XpBar from "@/components/XpBar";
 import SetupNotice from "@/components/SetupNotice";
@@ -19,10 +28,15 @@ type PendingCompletionRow = TaskCompletion & {
 export default function ParentHome() {
   const [parentId, setParentId] = useState<string | null>(null);
   const [kids, setKids] = useState<Profile[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [pending, setPending] = useState<PendingCompletionRow[]>([]);
-  const [pendingBonus, setPendingBonus] = useState<(BonusClaim & { profiles: Profile | null; bonuses: { title: string; icon: string } | null })[]>([]);
-  const [todayApproved, setTodayApproved] = useState<TaskCompletion[]>([]);
-  const [weekApproved, setWeekApproved] = useState<TaskCompletion[]>([]);
+  const [pendingBonus, setPendingBonus] = useState<
+    (BonusClaim & { profiles: Profile | null; bonuses: { title: string; icon: string } | null })[]
+  >([]);
+  const [completions, setCompletions] = useState<TaskCompletion[]>([]);
+  const [periods, setPeriods] = useState<CustodyPeriod[]>([]);
+  const [achievements, setAchievements] = useState<PeriodAchievement[]>([]);
+  const [streakRewards, setStreakRewards] = useState<StreakReward[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,32 +49,39 @@ export default function ParentHome() {
   const weekStart = useMemo(() => startOfWeek().toISOString().slice(0, 10), []);
 
   const reload = useCallback(async () => {
-    const [kidsRes, pendingRes, bonusRes, completionsRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
-      supabase
-        .from("task_completions")
-        .select("*, tasks(*), profiles!task_completions_child_id_fkey(*)")
-        .eq("status", "pending")
-        .order("completed_at"),
-      supabase
-        .from("bonus_claims")
-        .select("*, profiles!bonus_claims_child_id_fkey(*), bonuses(title, icon)")
-        .eq("status", "pending")
-        .order("claimed_at"),
-      supabase
-        .from("task_completions")
-        .select("*")
-        .eq("status", "approved")
-        .gte("completion_date", weekStart),
-    ]);
+    const [kidsRes, tasksRes, pendingRes, bonusRes, completionsRes, perRes, achRes, srRes] =
+      await Promise.all([
+        supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
+        supabase.from("tasks").select("*"),
+        supabase
+          .from("task_completions")
+          .select("*, tasks(*), profiles!task_completions_child_id_fkey(*)")
+          .eq("status", "pending")
+          .order("completed_at"),
+        supabase
+          .from("bonus_claims")
+          .select("*, profiles!bonus_claims_child_id_fkey(*), bonuses(title, icon)")
+          .eq("status", "pending")
+          .order("claimed_at"),
+        supabase
+          .from("task_completions")
+          .select("*")
+          .eq("status", "approved")
+          .gte("completion_date", weekStart),
+        supabase.from("custody_periods").select("*"),
+        supabase.from("period_achievements").select("*").order("period_end", { ascending: false }),
+        supabase.from("streak_rewards").select("*").eq("active", true),
+      ]);
     setKids((kidsRes.data as Profile[]) ?? []);
+    setTasks((tasksRes.data as Task[]) ?? []);
     setPending((pendingRes.data as PendingCompletionRow[]) ?? []);
     setPendingBonus((bonusRes.data as never) ?? []);
-    const approved = (completionsRes.data as TaskCompletion[]) ?? [];
-    setTodayApproved(approved.filter((c) => c.completion_date === today));
-    setWeekApproved(approved);
+    setCompletions((completionsRes.data as TaskCompletion[]) ?? []);
+    setPeriods((perRes.data as CustodyPeriod[]) ?? []);
+    setAchievements((achRes.data as PeriodAchievement[]) ?? []);
+    setStreakRewards((srRes.data as StreakReward[]) ?? []);
     setLoading(false);
-  }, [today, weekStart]);
+  }, [weekStart]);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -83,13 +104,10 @@ export default function ParentHome() {
       .eq("id", row.id);
 
     if (!error && approve && row.profiles) {
-      const xpGain = xpForReward(row.reward_ore);
+      // XP er periodebasert (regnes fra completions), så her oppdaterer vi kun saldo
       await supabase
         .from("profiles")
-        .update({
-          balance_ore: row.profiles.balance_ore + row.reward_ore,
-          xp: row.profiles.xp + xpGain,
-        })
+        .update({ balance_ore: row.profiles.balance_ore + row.reward_ore })
         .eq("id", row.profiles.id);
     }
     setBusy(null);
@@ -98,7 +116,6 @@ export default function ParentHome() {
 
   const reviewBonus = async (claim: (typeof pendingBonus)[number], approve: boolean) => {
     setBusy(claim.id);
-    const status = approve ? "approved" : "pending";
     if (approve) {
       await supabase
         .from("bonus_claims")
@@ -130,31 +147,61 @@ export default function ParentHome() {
       {/* Kid stats */}
       <section className="grid sm:grid-cols-2 gap-4">
         {kids.map((kid) => {
-          const todayKr = todayApproved
-            .filter((c) => c.child_id === kid.id)
+          const period = getCurrentPeriod(periods, kid.id);
+          const inPeriod = (c: TaskCompletion) =>
+            isDateInWindow(c.completion_date, period);
+          const todayKr = completions
+            .filter((c) => c.child_id === kid.id && c.completion_date === today)
             .reduce((s, c) => s + c.reward_ore, 0);
-          const weekKr = weekApproved
-            .filter((c) => c.child_id === kid.id)
+          const periodKr = completions
+            .filter((c) => c.child_id === kid.id && inPeriod(c))
             .reduce((s, c) => s + c.reward_ore, 0);
+          const periodXp = completions
+            .filter((c) => c.child_id === kid.id && inPeriod(c))
+            .reduce((s, c) => {
+              const t = tasks.find((x) => x.id === c.task_id);
+              return s + xpForTask(t ?? { xp_value: 10 });
+            }, 0);
+          let streak = 0;
+          for (const a of achievements.filter((a) => a.child_id === kid.id)) {
+            if (a.reached_max) streak++;
+            else break;
+          }
+          if (getLevel(periodXp).isMax) streak += 1;
           return (
             <div key={kid.id} className="card p-5">
               <div className="flex items-center gap-3 mb-3">
-                <ProfileAvatar emoji={kid.avatar_emoji} color={kid.avatar_color} size="md" />
+                <ProfileAvatar
+                  emoji={kid.avatar_emoji}
+                  color={kid.avatar_color}
+                  size="md"
+                />
                 <div className="flex-1">
                   <div className="font-extrabold text-purple-900 text-xl">{kid.name}</div>
                   <div className="text-sm text-purple-500 font-medium">Saldo</div>
-                  <div className="text-2xl font-extrabold text-purple-900">{formatKr(kid.balance_ore)}</div>
+                  <div className="text-2xl font-extrabold text-purple-900">
+                    {formatKr(kid.balance_ore)}
+                  </div>
                 </div>
+                {streak > 0 && (
+                  <div className="text-center">
+                    <div className="text-2xl">🔥</div>
+                    <div className="text-xs font-extrabold text-orange-600">{streak}</div>
+                  </div>
+                )}
               </div>
-              <XpBar xp={kid.xp} color={kid.avatar_color} />
+              <div className="text-[10px] text-purple-500 font-bold mb-1">
+                📅 {period.label}
+              </div>
+              <XpBar xp={periodXp} color={kid.avatar_color} variant="light" />
               <div className="grid grid-cols-2 gap-2 mt-3">
                 <div className="bg-purple-50 rounded-xl py-2 text-center">
                   <div className="text-xs text-purple-500 font-semibold">I dag</div>
                   <div className="font-extrabold text-purple-900">{formatKr(todayKr)}</div>
                 </div>
                 <div className="bg-purple-50 rounded-xl py-2 text-center">
-                  <div className="text-xs text-purple-500 font-semibold">Denne uka</div>
-                  <div className="font-extrabold text-purple-900">{formatKr(weekKr)}</div>
+                  <div className="text-xs text-purple-500 font-semibold">Perioden</div>
+                  <div className="font-extrabold text-purple-900">{formatKr(periodKr)}</div>
                 </div>
               </div>
             </div>
@@ -202,7 +249,8 @@ export default function ParentHome() {
                       {row.tasks?.icon} {row.tasks?.title ?? "?"}
                     </div>
                     <div className="text-xs text-purple-500 font-medium">
-                      {row.profiles?.name} · {formatKr(row.reward_ore)}
+                      {row.profiles?.name} · {formatKr(row.reward_ore)} ·{" "}
+                      {row.tasks ? xpForTask(row.tasks) : 10} XP
                     </div>
                   </div>
                   <button
