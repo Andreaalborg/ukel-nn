@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, getCurrentHouseholdId } from "@/lib/supabase";
 import type { Profile, Role } from "@/lib/types";
 import { ColorPicker, EmojiPicker } from "@/components/EmojiPicker";
 import ProfileAvatar from "@/components/ProfileAvatar";
@@ -31,8 +31,11 @@ export default function ProfilesPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [editing, setEditing] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(true);
+  const [householdId, setHouseholdId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    const hid = await getCurrentHouseholdId();
+    setHouseholdId(hid);
     const { data } = await supabase.from("profiles").select("*").order("sort_order");
     setProfiles((data as Profile[]) ?? []);
     setLoading(false);
@@ -47,12 +50,13 @@ export default function ProfilesPage() {
   }, [reload]);
 
   const save = async () => {
-    if (!editing || !editing.name.trim()) return;
+    if (!editing || !editing.name.trim() || !householdId) return;
     if (!/^\d{4,6}$/.test(editing.pin)) {
       alert("PIN må være 4-6 sifre");
       return;
     }
     const payload = {
+      household_id: householdId,
       name: editing.name.trim(),
       role: editing.role,
       pin: editing.pin,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, getCurrentHouseholdId } from "@/lib/supabase";
 import type { CustodyPeriod, PeriodAchievement, Profile, Task, TaskCompletion } from "@/lib/types";
 import { formatKr, todayIso } from "@/lib/utils";
 import { periodDays } from "@/lib/periods";
@@ -27,8 +27,11 @@ export default function PeriodsPage() {
   const [editing, setEditing] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [householdId, setHouseholdId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    const hid = await getCurrentHouseholdId();
+    setHouseholdId(hid);
     const [kRes, pRes, aRes, tRes, cRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
       supabase.from("custody_periods").select("*").order("start_date", { ascending: false }),
@@ -53,12 +56,13 @@ export default function PeriodsPage() {
   }, [reload]);
 
   const save = async () => {
-    if (!editing || !editing.child_id || !editing.start_date || !editing.end_date) return;
+    if (!editing || !editing.child_id || !editing.start_date || !editing.end_date || !householdId) return;
     if (editing.end_date < editing.start_date) {
       alert("Slutt-dato må være etter start-dato");
       return;
     }
     const payload = {
+      household_id: householdId,
       child_id: editing.child_id,
       start_date: editing.start_date,
       end_date: editing.end_date,
@@ -80,6 +84,7 @@ export default function PeriodsPage() {
   };
 
   const closePeriod = async (p: CustodyPeriod) => {
+    if (!householdId) return;
     if (!confirm(`Avslutt perioden for ${kids.find((k) => k.id === p.child_id)?.name}? Dette låser inn resultatet og starter på 0 XP neste periode.`)) return;
     setBusy(p.id);
     const periodCompletions = completions.filter(
@@ -96,6 +101,7 @@ export default function PeriodsPage() {
     const lvl = getLevel(xpEarned);
 
     await supabase.from("period_achievements").insert({
+      household_id: householdId,
       child_id: p.child_id,
       period_id: p.id,
       period_start: p.start_date,

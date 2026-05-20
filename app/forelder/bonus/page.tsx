@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, getCurrentHouseholdId } from "@/lib/supabase";
 import type { Bonus, BonusGoal, BonusPeriod, CustodyPeriod, Profile } from "@/lib/types";
 import { formatKr, kronerToOre, startOfMonth, startOfWeek } from "@/lib/utils";
 import { getCurrentPeriod } from "@/lib/periods";
@@ -44,11 +44,14 @@ export default function BonusPage() {
   const [completions, setCompletions] = useState<{ child_id: string; reward_ore: number; completion_date: string; status: string }[]>([]);
   const [claims, setClaims] = useState<{ id: string; bonus_id: string; child_id: string; claimed_at: string; status: string }[]>([]);
   const [custodyPeriods, setCustodyPeriods] = useState<CustodyPeriod[]>([]);
+  const [householdId, setHouseholdId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyClaim, setBusyClaim] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    const hid = await getCurrentHouseholdId();
+    setHouseholdId(hid);
     const [bRes, kRes, cRes, clRes, pRes] = await Promise.all([
       supabase.from("bonuses").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
@@ -73,7 +76,7 @@ export default function BonusPage() {
   }, [reload]);
 
   const save = async () => {
-    if (!editing || !editing.title.trim()) return;
+    if (!editing || !editing.title.trim() || !householdId) return;
     const goalValue =
       editing.goal_type === "amount"
         ? kronerToOre(editing.goal_value_kr)
@@ -81,6 +84,7 @@ export default function BonusPage() {
         ? editing.goal_value_count
         : null;
     const payload = {
+      household_id: householdId,
       title: editing.title.trim(),
       description: editing.description.trim() || null,
       reward_ore: kronerToOre(editing.reward_kr),
@@ -108,8 +112,10 @@ export default function BonusPage() {
   };
 
   const giveManually = async (bonus: Bonus, kid: Profile) => {
+    if (!householdId) return;
     setBusyClaim(`${bonus.id}-${kid.id}`);
     await supabase.from("bonus_claims").insert({
+      household_id: householdId,
       bonus_id: bonus.id,
       child_id: kid.id,
       reward_ore: bonus.reward_ore,

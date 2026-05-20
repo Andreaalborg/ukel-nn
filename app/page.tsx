@@ -2,16 +2,18 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase, getCurrentHouseholdId, setCurrentHouseholdId } from "@/lib/supabase";
 import { setActiveProfile } from "@/lib/auth";
 import type { Profile } from "@/lib/types";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import PinPad from "@/components/PinPad";
 import SetupNotice from "@/components/SetupNotice";
 import { AnimatePresence, motion } from "framer-motion";
+import { useSession } from "@/lib/useSession";
 
 export default function Home() {
   const router = useRouter();
+  const { session, loading: sessionLoading } = useSession();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,27 +21,46 @@ export default function Home() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [resetPin, setResetPin] = useState(0);
 
+  const loadProfiles = useCallback(async () => {
+    if (!session) return;
+    const hid = await getCurrentHouseholdId();
+    if (!hid) {
+      router.replace("/onboarding");
+      return;
+    }
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("household_id", hid)
+      .order("sort_order");
+    if (error) setError(error.message);
+    else setProfiles((data as Profile[]) ?? []);
+    if ((data?.length ?? 0) === 0) {
+      router.replace("/onboarding");
+      return;
+    }
+    setLoading(false);
+  }, [session, router]);
+
   useEffect(() => {
     if (!isSupabaseConfigured) {
       setLoading(false);
       return;
     }
-    (async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("sort_order");
-      if (error) setError(error.message);
-      else setProfiles(data ?? []);
-      setLoading(false);
-    })();
-  }, []);
+    if (sessionLoading) return;
+    if (!session) {
+      router.replace("/auth/signin");
+      return;
+    }
+    loadProfiles();
+  }, [session, sessionLoading, router, loadProfiles]);
 
   const handlePin = useCallback(
     (pin: string) => {
       if (!selected) return;
       if (pin === selected.pin) {
         setActiveProfile(selected);
+        setCurrentHouseholdId(selected.household_id);
         if (selected.role === "parent") router.push("/forelder");
         else router.push(`/barn?p=${selected.id}`);
       } else {
@@ -53,7 +74,7 @@ export default function Home() {
 
   if (!isSupabaseConfigured) return <SetupNotice />;
 
-  if (loading) {
+  if (sessionLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-6xl animate-float">🌟</div>
@@ -61,15 +82,13 @@ export default function Home() {
     );
   }
 
-  if (error || profiles.length === 0) {
+  if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="card p-8 max-w-md text-center space-y-3">
-          <div className="text-5xl">🤔</div>
-          <h2 className="text-xl font-bold text-purple-900">Ingen profiler funnet</h2>
-          <p className="text-purple-700 text-sm">
-            {error ?? "Kjør schema.sql i Supabase for å sette opp databasen."}
-          </p>
+          <div className="text-5xl">⚠️</div>
+          <h2 className="text-xl font-bold text-purple-900">Noe gikk galt</h2>
+          <p className="text-purple-700 text-sm">{error}</p>
         </div>
       </div>
     );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, getCurrentHouseholdId } from "@/lib/supabase";
 import type { Payout, Profile } from "@/lib/types";
 import { formatKr, kronerToOre } from "@/lib/utils";
 import ProfileAvatar from "@/components/ProfileAvatar";
@@ -12,9 +12,12 @@ export default function PayoutsPage() {
   const [kids, setKids] = useState<Profile[]>([]);
   const [history, setHistory] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
+  const [householdId, setHouseholdId] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<{ kid: Profile; amount: number; note: string } | null>(null);
 
   const reload = useCallback(async () => {
+    const hid = await getCurrentHouseholdId();
+    setHouseholdId(hid);
     const [kRes, hRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
       supabase.from("payouts").select("*").order("paid_at", { ascending: false }).limit(20),
@@ -33,10 +36,11 @@ export default function PayoutsPage() {
   }, [reload]);
 
   const handlePayout = async () => {
-    if (!confirming) return;
+    if (!confirming || !householdId) return;
     const { kid, amount, note } = confirming;
     const parent = getActiveProfile();
     await supabase.from("payouts").insert({
+      household_id: householdId,
       child_id: kid.id,
       amount_ore: amount,
       note: note || null,

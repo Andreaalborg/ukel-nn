@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, getCurrentHouseholdId } from "@/lib/supabase";
 import type { Profile, Recurrence, Task } from "@/lib/types";
 import { formatKr, kronerToOre } from "@/lib/utils";
 import { describeRecurrence, DAY_NAMES } from "@/lib/scheduling";
@@ -47,8 +47,12 @@ export default function TasksPage() {
   const [kids, setKids] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Draft | null>(null);
+  const [householdId, setHouseholdId] = useState<string | null>(null);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   const reload = useCallback(async () => {
+    const hid = await getCurrentHouseholdId();
+    setHouseholdId(hid);
     const [tRes, kRes] = await Promise.all([
       supabase.from("tasks").select("*").order("sort_order"),
       supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
@@ -67,8 +71,9 @@ export default function TasksPage() {
   }, [reload]);
 
   const save = async () => {
-    if (!editing || !editing.title.trim()) return;
+    if (!editing || !editing.title.trim() || !householdId) return;
     const payload = {
+      household_id: householdId,
       title: editing.title.trim(),
       description: editing.description.trim() || null,
       reward_ore: kronerToOre(editing.reward_kr),
@@ -108,13 +113,31 @@ export default function TasksPage() {
   if (!isSupabaseConfigured) return <SetupNotice />;
   if (loading) return <div className="text-center py-12 text-4xl animate-float">📝</div>;
 
+  // Grupper oppgaver per barn (eller "alle")
+  const groups: { key: string; label: string; emoji: string; color: string; tasks: Task[] }[] = [
+    {
+      key: "all",
+      label: "Alle barn",
+      emoji: "👨‍👩‍👧‍👦",
+      color: "#8B5CF6",
+      tasks: tasks.filter((t) => !t.assigned_to),
+    },
+    ...kids.map((k) => ({
+      key: k.id,
+      label: k.name,
+      emoji: k.avatar_emoji,
+      color: k.avatar_color,
+      tasks: tasks.filter((t) => t.assigned_to === k.id),
+    })),
+  ];
+
   return (
     <div className="space-y-4">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-extrabold text-purple-900">Oppgaver</h1>
           <p className="text-purple-600 font-medium text-sm">
-            Lag, rediger og slett oppgaver
+            Gruppert per barn. Klikk for å åpne/lukke.
           </p>
         </div>
         <button onClick={() => setEditing({ ...EMPTY })} className="btn-primary">
@@ -122,67 +145,112 @@ export default function TasksPage() {
         </button>
       </header>
 
-      <div className="grid gap-2">
-        <AnimatePresence>
-          {tasks.map((t) => (
-            <motion.div
-              key={t.id}
-              layout
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className={`card p-3 flex items-center gap-3 ${!t.active && "opacity-50"}`}
-            >
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                style={{ background: `${t.color}33` }}
+      <div className="space-y-3">
+        {groups.map((g) => {
+          const isOpen = openGroups[g.key] ?? true;
+          const active = g.tasks.filter((t) => t.active).length;
+          return (
+            <div key={g.key} className="card overflow-hidden">
+              <button
+                onClick={() => setOpenGroups({ ...openGroups, [g.key]: !isOpen })}
+                className="w-full p-3 flex items-center gap-3 hover:bg-purple-50"
               >
-                {t.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-extrabold text-purple-900 truncate">{t.title}</div>
-                <div className="text-xs text-purple-500">
-                  {formatKr(t.reward_ore)} · {t.xp_value} XP · {describeRecurrence(t)}
-                  {t.assigned_to && ` · ${kids.find((k) => k.id === t.assigned_to)?.name ?? ""}`}
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                  style={{ background: `${g.color}33` }}
+                >
+                  {g.emoji}
                 </div>
-              </div>
-              <button
-                onClick={() => toggleActive(t)}
-                className={`text-xs font-bold px-2 py-1 rounded-full ${
-                  t.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                }`}
-              >
-                {t.active ? "PÅ" : "AV"}
+                <div className="flex-1 text-left">
+                  <div className="font-extrabold text-purple-900">{g.label}</div>
+                  <div className="text-xs text-purple-500 font-medium">
+                    {g.tasks.length} oppgaver · {active} aktive
+                  </div>
+                </div>
+                <div className={`text-purple-400 transition-transform ${isOpen ? "rotate-90" : ""}`}>
+                  →
+                </div>
               </button>
-              <button
-                onClick={() =>
-                  setEditing({
-                    id: t.id,
-                    title: t.title,
-                    description: t.description ?? "",
-                    reward_kr: t.reward_ore / 100,
-                    xp_value: t.xp_value ?? 10,
-                    icon: t.icon,
-                    color: t.color,
-                    recurrence: t.recurrence,
-                    days_of_week: t.days_of_week ?? [1, 2, 3, 4, 5],
-                    interval_days: t.interval_days ?? 2,
-                    start_date: t.start_date ?? "",
-                    end_date: t.end_date ?? "",
-                    assigned_to: t.assigned_to,
-                    active: t.active,
-                  })
-                }
-                className="text-purple-500 px-2"
-              >
-                ✏️
-              </button>
-              <button onClick={() => del(t.id)} className="text-red-400 px-2">
-                🗑️
-              </button>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+              <AnimatePresence>
+                {isOpen && (
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: "auto" }}
+                    exit={{ height: 0 }}
+                    className="border-t border-purple-100"
+                  >
+                    {g.tasks.length === 0 ? (
+                      <div className="p-4 text-center text-purple-400 text-sm">
+                        Ingen oppgaver enda for {g.label.toLowerCase()}.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-purple-50">
+                        {g.tasks.map((t) => (
+                          <div
+                            key={t.id}
+                            className={`p-3 flex items-center gap-3 ${!t.active && "opacity-50"}`}
+                          >
+                            <div
+                              className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                              style={{ background: `${t.color}33` }}
+                            >
+                              {t.icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-extrabold text-purple-900 truncate">
+                                {t.title}
+                              </div>
+                              <div className="text-xs text-purple-500">
+                                {formatKr(t.reward_ore)} · {t.xp_value} XP ·{" "}
+                                {describeRecurrence(t)}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => toggleActive(t)}
+                              className={`text-[10px] font-bold px-2 py-1 rounded-full ${
+                                t.active
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-500"
+                              }`}
+                            >
+                              {t.active ? "PÅ" : "AV"}
+                            </button>
+                            <button
+                              onClick={() =>
+                                setEditing({
+                                  id: t.id,
+                                  title: t.title,
+                                  description: t.description ?? "",
+                                  reward_kr: t.reward_ore / 100,
+                                  xp_value: t.xp_value ?? 10,
+                                  icon: t.icon,
+                                  color: t.color,
+                                  recurrence: t.recurrence,
+                                  days_of_week: t.days_of_week ?? [1, 2, 3, 4, 5],
+                                  interval_days: t.interval_days ?? 2,
+                                  start_date: t.start_date ?? "",
+                                  end_date: t.end_date ?? "",
+                                  assigned_to: t.assigned_to,
+                                  active: t.active,
+                                })
+                              }
+                              className="text-purple-500 px-1"
+                            >
+                              ✏️
+                            </button>
+                            <button onClick={() => del(t.id)} className="text-red-400 px-1">
+                              🗑️
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
         {tasks.length === 0 && (
           <div className="card p-6 text-center">
             <div className="text-4xl mb-1">📝</div>

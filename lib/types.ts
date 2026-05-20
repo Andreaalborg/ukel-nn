@@ -1,4 +1,35 @@
 export type Role = "child" | "parent";
+
+export type Household = {
+  id: string;
+  name: string;
+  plan: "free" | "family" | "family_plus" | "beta";
+  trial_ends_at: string | null;
+  subscription_status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type HouseholdMember = {
+  id: string;
+  household_id: string;
+  user_id: string;
+  role: "owner" | "co_parent";
+  display_name: string | null;
+  created_at: string;
+};
+
+export type HouseholdInvite = {
+  id: string;
+  household_id: string;
+  invited_by: string | null;
+  invited_email: string;
+  token: string;
+  role: "co_parent";
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+};
 export type Recurrence = "daily" | "weekly" | "once" | "days_of_week" | "interval";
 export type CompletionStatus = "pending" | "approved" | "rejected";
 export type BonusGoal = "tasks_count" | "amount" | "manual";
@@ -6,6 +37,7 @@ export type BonusPeriod = "week" | "month" | "custom" | "period";
 
 export type Profile = {
   id: string;
+  household_id: string;
   name: string;
   role: Role;
   pin: string;
@@ -20,6 +52,7 @@ export type Profile = {
 
 export type Task = {
   id: string;
+  household_id: string;
   title: string;
   description: string | null;
   reward_ore: number;
@@ -39,6 +72,7 @@ export type Task = {
 
 export type TaskCompletion = {
   id: string;
+  household_id: string;
   task_id: string;
   child_id: string;
   status: CompletionStatus;
@@ -51,6 +85,7 @@ export type TaskCompletion = {
 
 export type Bonus = {
   id: string;
+  household_id: string;
   title: string;
   description: string | null;
   reward_ore: number;
@@ -67,6 +102,7 @@ export type Bonus = {
 
 export type BonusClaim = {
   id: string;
+  household_id: string;
   bonus_id: string;
   child_id: string;
   status: "pending" | "approved";
@@ -77,6 +113,7 @@ export type BonusClaim = {
 
 export type Payout = {
   id: string;
+  household_id: string;
   child_id: string;
   amount_ore: number;
   note: string | null;
@@ -86,6 +123,7 @@ export type Payout = {
 
 export type Badge = {
   id: string;
+  household_id: string;
   child_id: string;
   badge_type: string;
   earned_at: string;
@@ -93,6 +131,7 @@ export type Badge = {
 
 export type CustodyPeriod = {
   id: string;
+  household_id: string;
   child_id: string;
   start_date: string;
   end_date: string;
@@ -103,6 +142,7 @@ export type CustodyPeriod = {
 
 export type PeriodAchievement = {
   id: string;
+  household_id: string;
   child_id: string;
   period_id: string | null;
   period_start: string;
@@ -117,6 +157,7 @@ export type PeriodAchievement = {
 
 export type StreakReward = {
   id: string;
+  household_id: string;
   child_id: string | null;
   title: string;
   description: string | null;
@@ -129,6 +170,7 @@ export type StreakReward = {
 
 export type StreakClaim = {
   id: string;
+  household_id: string;
   streak_reward_id: string;
   child_id: string;
   streak_count: number;

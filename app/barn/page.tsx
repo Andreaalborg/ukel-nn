@@ -2,8 +2,9 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, getCurrentHouseholdId } from "@/lib/supabase";
 import { clearActiveProfile, getActiveProfile } from "@/lib/auth";
+import { useSession } from "@/lib/useSession";
 import type {
   Bonus,
   BonusClaim,
@@ -50,7 +51,9 @@ export default function ChildPageWrapper() {
 function ChildPage() {
   const router = useRouter();
   const search = useSearchParams();
+  const { session, loading: sessionLoading } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [householdId, setHouseholdId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [completions, setCompletions] = useState<TaskCompletion[]>([]);
   const [bonuses, setBonuses] = useState<Bonus[]>([]);
@@ -71,6 +74,8 @@ function ChildPage() {
 
   const loadAll = useCallback(async () => {
     if (!profileId) return;
+    const hid = await getCurrentHouseholdId();
+    setHouseholdId(hid);
     const [pRes, tRes, cRes, bRes, bcRes, perRes, aRes, srRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", profileId).single(),
       supabase.from("tasks").select("*").eq("active", true).order("sort_order"),
@@ -105,12 +110,17 @@ function ChildPage() {
       setLoading(false);
       return;
     }
+    if (sessionLoading) return;
+    if (!session) {
+      router.replace("/auth/signin");
+      return;
+    }
     if (!profileId) {
       router.replace("/");
       return;
     }
     loadAll();
-  }, [profileId, loadAll, router]);
+  }, [profileId, loadAll, router, session, sessionLoading]);
 
   const today = todayIso();
   const weekStart = startOfWeek().toISOString().slice(0, 10);
@@ -187,11 +197,12 @@ function ChildPage() {
   }, [completions, currentPeriod]);
 
   const claimTask = async (task: TaskWithState) => {
-    if (!profile || task.state !== "available") return;
+    if (!profile || !householdId || task.state !== "available") return;
     setBusy(task.id);
     const { data, error } = await supabase
       .from("task_completions")
       .insert({
+        household_id: householdId,
         task_id: task.id,
         child_id: profile.id,
         reward_ore: task.reward_ore,
@@ -283,9 +294,17 @@ function ChildPage() {
           >
             ← Bytt
           </button>
-          <div className="text-right">
-            <div className="text-xs opacity-80 font-medium">Saldo</div>
-            <div className="text-3xl font-extrabold">{formatKr(profile.balance_ore)}</div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push(`/barn/statistikk?p=${profile.id}`)}
+              className="text-white/80 text-sm font-semibold bg-white/20 backdrop-blur px-3 py-1.5 rounded-full"
+            >
+              📊 Stats
+            </button>
+            <div className="text-right">
+              <div className="text-xs opacity-80 font-medium">Saldo</div>
+              <div className="text-3xl font-extrabold">{formatKr(profile.balance_ore)}</div>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-3 mb-3">

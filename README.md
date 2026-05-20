@@ -41,9 +41,24 @@ Bygget for Ludvig (7) og Josefine (9). Funker på telefon, iPad og PC.
 3. Vent ~2 minutter mens prosjektet bygges
 4. Når det er klart: åpne **SQL Editor** i venstre meny
 5. Trykk **+ New query**, lim inn alt innholdet fra `supabase/schema.sql` og kjør (Run/⌘+Enter)
-6. **Hvis du oppgraderer fra v1**: kjør også `supabase/migration_v2.sql` for å legge til fleksibel hyppighet, perioder og strekk-bonus.
+6. **Hvis du oppgraderer fra v1**: kjør også `supabase/migration_v2.sql`.
+7. **Hvis du oppgraderer fra v2 til multi-tenant**: kjør `supabase/migration_v3.sql` som introduserer Supabase Auth, households og co-parent-sharing.
 
-Dette setter opp alle tabellene og legger inn standardprofiler for Mamma/Pappa, Ludvig og Josefine.
+### Etter v3-migrasjon
+
+Den eksisterende dataen din ligger nå i en "Min familie"-husholdning som er foreldreløs. For å claime den:
+
+1. Åpne appen → du blir sendt til `/auth/signup`
+2. Registrer deg med din e-post + passord
+3. I Supabase SQL Editor, kjør (bytt ut e-posten):
+   ```sql
+   insert into household_members (household_id, user_id, role, display_name)
+   select h.id, u.id, 'owner', 'Pappa'
+   from households h, auth.users u
+   where h.name = 'Min familie'
+   and u.email = 'din-epost@eksempel.no';
+   ```
+4. Last appen på nytt → du er nå koblet til den eksisterende dataen!
 
 ### 2. Hent API-nøkler
 

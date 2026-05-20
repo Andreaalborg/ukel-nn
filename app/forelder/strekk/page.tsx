@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, getCurrentHouseholdId } from "@/lib/supabase";
 import type { PeriodAchievement, Profile, StreakClaim, StreakReward } from "@/lib/types";
 import { formatKr, kronerToOre } from "@/lib/utils";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import SetupNotice from "@/components/SetupNotice";
-import { getActiveProfile } from "@/lib/auth";
 import { AnimatePresence, motion } from "framer-motion";
 
 type Draft = {
@@ -39,8 +38,11 @@ export default function StreakPage() {
   const [editing, setEditing] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [householdId, setHouseholdId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    const hid = await getCurrentHouseholdId();
+    setHouseholdId(hid);
     const [rRes, kRes, aRes, cRes] = await Promise.all([
       supabase.from("streak_rewards").select("*").order("created_at"),
       supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
@@ -63,8 +65,9 @@ export default function StreakPage() {
   }, [reload]);
 
   const save = async () => {
-    if (!editing || !editing.title.trim()) return;
+    if (!editing || !editing.title.trim() || !householdId) return;
     const payload = {
+      household_id: householdId,
       child_id: editing.child_id,
       title: editing.title.trim(),
       description: editing.description.trim() || null,
@@ -98,9 +101,10 @@ export default function StreakPage() {
   };
 
   const awardStreak = async (reward: StreakReward, kid: Profile, streakCount: number) => {
+    if (!householdId) return;
     setBusy(`${reward.id}-${kid.id}`);
-    const parent = getActiveProfile();
     await supabase.from("streak_claims").insert({
+      household_id: householdId,
       streak_reward_id: reward.id,
       child_id: kid.id,
       streak_count: streakCount,
