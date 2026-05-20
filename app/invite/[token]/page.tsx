@@ -41,22 +41,15 @@ export default function InvitePage() {
   const accept = async () => {
     if (!session || !invite) return;
     setAccepting(true);
-    const { error: mErr } = await supabase.from("household_members").insert({
-      household_id: invite.household_id,
-      user_id: session.user.id,
-      role: "co_parent",
-      display_name: session.user.email?.split("@")[0],
+    const { data, error: rpcErr } = await supabase.rpc("accept_household_invite", {
+      p_token: invite.token,
     });
-    if (mErr) {
-      setError(mErr.message);
+    if (rpcErr || !data) {
+      setError(rpcErr?.message ?? "Kunne ikke akseptere invitasjonen");
       setAccepting(false);
       return;
     }
-    await supabase
-      .from("household_invites")
-      .update({ accepted_at: new Date().toISOString() })
-      .eq("id", invite.id);
-    setCurrentHouseholdId(invite.household_id);
+    setCurrentHouseholdId(data as string);
     router.push("/forelder");
   };
 

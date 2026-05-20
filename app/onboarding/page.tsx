@@ -98,26 +98,16 @@ export default function OnboardingPage() {
     setCreating(true);
     setError(null);
     try {
-      // 1) Opprett husholdning
-      const { data: household, error: hErr } = await supabase
-        .from("households")
-        .insert({ name: householdName.trim(), plan: "beta" })
-        .select()
-        .single();
-      if (hErr || !household) throw hErr ?? new Error("Kunne ikke opprette husholdning");
-
-      // 2) Koble bruker som owner
-      const { error: mErr } = await supabase.from("household_members").insert({
-        household_id: household.id,
-        user_id: session.user.id,
-        role: "owner",
-        display_name: parent.display_name.trim(),
+      // 1) Opprett husholdning + medlem atomisk via RPC (hopper over RLS-fellen)
+      const { data: householdId, error: hErr } = await supabase.rpc("create_household_with_owner", {
+        p_name: householdName.trim(),
+        p_display_name: parent.display_name.trim(),
       });
-      if (mErr) throw mErr;
+      if (hErr || !householdId) throw hErr ?? new Error("Kunne ikke opprette husholdning");
 
-      // 3) Opprett parent-profil (for PIN-tilgang på delt enhet)
+      // 2) Opprett parent-profil (for PIN-tilgang på delt enhet)
       const { error: pErr } = await supabase.from("profiles").insert({
-        household_id: household.id,
+        household_id: householdId,
         name: parent.display_name.trim(),
         role: "parent",
         pin: parent.pin,
@@ -127,9 +117,9 @@ export default function OnboardingPage() {
       });
       if (pErr) throw pErr;
 
-      // 4) Opprett barn-profiler
+      // 3) Opprett barn-profiler
       const kidRows = kids.map((k, i) => ({
-        household_id: household.id,
+        household_id: householdId,
         name: k.name.trim(),
         role: "child" as const,
         pin: k.pin,
@@ -141,10 +131,10 @@ export default function OnboardingPage() {
       const { error: kErr } = await supabase.from("profiles").insert(kidRows);
       if (kErr) throw kErr;
 
-      // 5) Opprett valgte oppgaver
+      // 4) Opprett valgte oppgaver
       const chosenTasks = TASK_TEMPLATES.filter((t) => selectedTaskIds.includes(t.id));
       const taskRows = chosenTasks.map((t, i) => ({
-        household_id: household.id,
+        household_id: householdId,
         title: t.title,
         description: t.description || null,
         reward_ore: t.reward_ore,
@@ -160,9 +150,9 @@ export default function OnboardingPage() {
         if (tErr) throw tErr;
       }
 
-      // 6) Standard strekk-bonus
+      // 5) Standard strekk-bonus
       await supabase.from("streak_rewards").insert({
-        household_id: household.id,
+        household_id: householdId,
         title: "3-på-rad-bonus",
         description: "Nå Level 10 i tre perioder på rad",
         icon: "🔥",
@@ -170,8 +160,8 @@ export default function OnboardingPage() {
         reward_ore: 5000,
       });
 
-      // 7) Lagre household_id og gå videre
-      setCurrentHouseholdId(household.id);
+      // 6) Lagre household_id og gå videre
+      setCurrentHouseholdId(householdId);
       router.push("/forelder");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Noe gikk galt";
