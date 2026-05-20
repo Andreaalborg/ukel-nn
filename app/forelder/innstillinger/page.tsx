@@ -33,7 +33,7 @@ export default function SettingsPage() {
     }
     const [hRes, mRes, iRes] = await Promise.all([
       supabase.from("households").select("*").eq("id", hid).single(),
-      supabase.from("household_members").select("*").eq("household_id", hid),
+      supabase.rpc("get_household_members", { p_household_id: hid }),
       supabase
         .from("household_invites")
         .select("*")
@@ -96,7 +96,7 @@ export default function SettingsPage() {
       return;
     }
     if (!confirm(`Fjern ${m.display_name ?? "co-parent"} fra husholdningen?`)) return;
-    await supabase.from("household_members").delete().eq("id", m.id);
+    await supabase.rpc("remove_household_member", { p_member_id: m.id });
     reload();
   };
 
