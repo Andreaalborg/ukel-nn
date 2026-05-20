@@ -23,10 +23,26 @@ export default function Home() {
 
   const loadProfiles = useCallback(async () => {
     if (!session) return;
-    const hid = await getCurrentHouseholdId();
+    let hid = await getCurrentHouseholdId();
     if (!hid) {
-      router.replace("/onboarding");
-      return;
+      // Sjekk om brukeren er medlem av en husholdning
+      const { data: members } = await supabase
+        .from("household_members")
+        .select("household_id")
+        .eq("user_id", session.user.id)
+        .limit(1);
+      if (members && members.length > 0) {
+        hid = members[0].household_id as string;
+      } else {
+        // Ingen medlemskap — sjekk om det finnes "foreldreløse" husholdninger
+        const { data: orphans } = await supabase.rpc("list_orphan_households");
+        if (orphans && (orphans as unknown[]).length > 0) {
+          router.replace("/claim");
+        } else {
+          router.replace("/onboarding");
+        }
+        return;
+      }
     }
     const { data, error } = await supabase
       .from("profiles")

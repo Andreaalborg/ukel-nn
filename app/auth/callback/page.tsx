@@ -9,23 +9,32 @@ export default function AuthCallback() {
 
   useEffect(() => {
     (async () => {
-      // Supabase håndterer URL-fragmentet automatisk via detectSessionInUrl.
-      // Vent litt og sjekk session.
       const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        const { data: members } = await supabase
-          .from("household_members")
-          .select("household_id")
-          .eq("user_id", data.session.user.id)
-          .limit(1);
-        if (members && members.length > 0) {
-          router.replace("/");
-        } else {
-          router.replace("/onboarding");
-        }
-      } else {
+      if (!data.session) {
         router.replace("/auth/signin");
+        return;
       }
+
+      // 1) Allerede medlem av en husholdning?
+      const { data: members } = await supabase
+        .from("household_members")
+        .select("household_id")
+        .eq("user_id", data.session.user.id)
+        .limit(1);
+      if (members && members.length > 0) {
+        router.replace("/");
+        return;
+      }
+
+      // 2) Eksisterer det husholdninger uten medlemmer som kan claimes?
+      const { data: orphans } = await supabase.rpc("list_orphan_households");
+      if (orphans && (orphans as unknown[]).length > 0) {
+        router.replace("/claim");
+        return;
+      }
+
+      // 3) Ellers gå til onboarding
+      router.replace("/onboarding");
     })();
   }, [router]);
 

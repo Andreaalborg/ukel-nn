@@ -116,3 +116,31 @@ begin
 end $$;
 
 grant execute on function claim_orphan_household(text, text) to authenticated;
+
+-- Funksjon: liste husholdninger uten medlemmer (kan claimes)
+create or replace function list_orphan_households()
+returns table (
+  id uuid,
+  name text,
+  child_count bigint,
+  task_count bigint,
+  total_balance_ore bigint,
+  created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    h.id,
+    h.name,
+    (select count(*) from profiles p where p.household_id = h.id and p.role = 'child') as child_count,
+    (select count(*) from tasks t where t.household_id = h.id) as task_count,
+    coalesce((select sum(balance_ore) from profiles p where p.household_id = h.id and p.role = 'child'), 0) as total_balance_ore,
+    h.created_at
+  from households h
+  where not exists (select 1 from household_members where household_id = h.id)
+  order by h.created_at asc;
+$$;
+
+grant execute on function list_orphan_households() to authenticated;
