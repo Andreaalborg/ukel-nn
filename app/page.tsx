@@ -23,38 +23,49 @@ export default function Home() {
 
   const loadProfiles = useCallback(async () => {
     if (!session) return;
-    let hid = await getCurrentHouseholdId();
-    if (!hid) {
-      // Sjekk om brukeren er medlem av en husholdning
-      const { data: members } = await supabase
-        .from("household_members")
-        .select("household_id")
-        .eq("user_id", session.user.id)
-        .limit(1);
-      if (members && members.length > 0) {
-        hid = members[0].household_id as string;
+
+    // 1) Hvilke husholdninger er denne brukeren medlem av?
+    const { data: memberships } = await supabase
+      .from("household_members")
+      .select("household_id")
+      .eq("user_id", session.user.id);
+
+    if (!memberships || memberships.length === 0) {
+      // Ikke medlem av noe — sjekk om det finnes foreldreløse husholdninger å claime
+      const { data: orphans } = await supabase.rpc("list_orphan_households");
+      if (orphans && (orphans as unknown[]).length > 0) {
+        router.replace("/claim");
       } else {
-        // Ingen medlemskap — sjekk om det finnes "foreldreløse" husholdninger
-        const { data: orphans } = await supabase.rpc("list_orphan_households");
-        if (orphans && (orphans as unknown[]).length > 0) {
-          router.replace("/claim");
-        } else {
-          router.replace("/onboarding");
-        }
-        return;
+        router.replace("/onboarding");
       }
+      return;
     }
+
+    // 2) Velg cached husholdning hvis fortsatt gyldig, ellers den første
+    const memberIds = memberships.map((m) => m.household_id as string);
+    const hid = await getCurrentHouseholdId();
+    const useHid = hid && memberIds.includes(hid) ? hid : memberIds[0];
+
+    // 3) Hent profiler
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .eq("household_id", hid)
+      .eq("household_id", useHid)
       .order("sort_order");
-    if (error) setError(error.message);
-    else setProfiles((data as Profile[]) ?? []);
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    // 4) Hvis husholdningen er tom for profiler (sjeldent), gå til wizarden
     if ((data?.length ?? 0) === 0) {
       router.replace("/onboarding");
       return;
     }
+
+    setProfiles((data as Profile[]) ?? []);
     setLoading(false);
   }, [session, router]);
 
