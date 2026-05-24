@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import SetupNotice from "@/components/SetupNotice";
+import PasswordStrength, { MIN_PASSWORD_LENGTH } from "@/components/PasswordStrength";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -20,8 +21,8 @@ export default function SignUpPage() {
     e.preventDefault();
     setError(null);
     setInfo(null);
-    if (password.length < 6) {
-      setError("Passord må være minst 6 tegn");
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Passord må være minst ${MIN_PASSWORD_LENGTH} tegn`);
       return;
     }
     setLoading(true);
@@ -66,16 +67,19 @@ export default function SignUpPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-bold text-purple-700 mb-1">Passord (min 6 tegn)</label>
+            <label className="block text-sm font-bold text-purple-700 mb-1">
+              Passord (min {MIN_PASSWORD_LENGTH} tegn)
+            </label>
             <input
               type="password"
               required
               autoComplete="new-password"
-              minLength={6}
+              minLength={MIN_PASSWORD_LENGTH}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl border-2 border-purple-200 focus:border-purple-500 outline-none"
             />
+            <PasswordStrength password={password} />
           </div>
           {error && (
             <div className="bg-red-50 text-red-700 text-sm font-semibold p-3 rounded-xl">{error}</div>

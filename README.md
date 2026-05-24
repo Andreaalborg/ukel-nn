@@ -86,6 +86,30 @@ npm run dev
 
 Åpne [http://localhost:3000](http://localhost:3000) i nettleseren.
 
+### 5. Konfigurer Supabase Auth URL-er (KRITISK)
+
+For at e-postbekreftelse og passordreset skal funke må Supabase vite hvor brukerne skal sendes tilbake.
+
+Gå til **Authentication → URL Configuration** og sett:
+
+- **Site URL:** `https://din-app.vercel.app` (eller `http://localhost:3000` for lokal utvikling)
+- **Redirect URLs:** legg til alle disse:
+  - `http://localhost:3000/auth/callback`
+  - `https://din-app.vercel.app/auth/callback`
+  - `https://din-app.vercel.app/`
+
+Uten dette går e-postlenken til en blank side eller feilside.
+
+### 6. Anbefalte passord-innstillinger
+
+I Supabase: **Authentication → Sign In / Providers → Email**:
+
+- **Minimum password length:** 8
+- **Password requirements:** "Letters and digits" (eller sterkere)
+- **Prevent use of leaked passwords:** krever Pro-plan — slå på når vi går produksjon
+
+Appen håndhever 8-tegn på klient-siden, men Supabase bør også gjøre det server-side.
+
 ## 🔐 Standard PIN-koder
 
 Endre disse i appen via **Profiler**-siden!

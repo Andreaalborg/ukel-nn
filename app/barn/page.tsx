@@ -16,7 +16,12 @@ import type {
   TaskCompletion,
 } from "@/lib/types";
 import { formatKr, startOfMonth, startOfWeek, todayIso } from "@/lib/utils";
-import { describeRecurrence, getTaskState } from "@/lib/scheduling";
+import {
+  describeDateRelative,
+  describeRecurrence,
+  getCarryOverCompletions,
+  getTaskState,
+} from "@/lib/scheduling";
 import { getCurrentPeriod, isDateInWindow } from "@/lib/periods";
 import { getLevel, xpForTask } from "@/lib/levels";
 import ProfileAvatar from "@/components/ProfileAvatar";
@@ -51,7 +56,7 @@ export default function ChildPageWrapper() {
 function ChildPage() {
   const router = useRouter();
   const search = useSearchParams();
-  const { session, loading: sessionLoading } = useSession();
+  const { session, loading: sessionLoading, error: sessionError } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [householdId, setHouseholdId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -172,6 +177,21 @@ function ChildPage() {
       });
   }, [tasks, completions, profileId, today, weekStart]);
 
+  // Carry-over: pending completions fra tidligere dager som ikke er godkjent
+  const carryOvers = useMemo(() => {
+    const mine = completions.filter((c) => c.child_id === profileId);
+    return tasks
+      .flatMap((task) =>
+        getCarryOverCompletions(task, mine, today).map((completion) => ({
+          task,
+          completion,
+        }))
+      )
+      .sort((a, b) =>
+        b.completion.completion_date.localeCompare(a.completion.completion_date)
+      );
+  }, [tasks, completions, profileId, today]);
+
   const groupedTasks = useMemo(() => {
     return {
       available: taskList.filter((t) => t.state === "available"),
@@ -267,6 +287,20 @@ function ChildPage() {
   );
 
   if (!isSupabaseConfigured) return <SetupNotice />;
+  if (sessionError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="card p-6 max-w-md text-center space-y-3">
+          <div className="text-5xl">😴</div>
+          <h2 className="text-xl font-bold text-purple-900">Mistet kontakt med serveren</h2>
+          <p className="text-purple-700 text-sm">{sessionError}</p>
+          <button onClick={() => window.location.reload()} className="btn-primary">
+            Last på nytt
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (loading || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -499,13 +533,13 @@ function ChildPage() {
           )}
         </section>
 
-        {/* Venter på godkjenning */}
-        {groupedTasks.pending.length > 0 && (
+        {/* Venter på godkjenning (i dag + carry-over fra tidligere dager) */}
+        {(groupedTasks.pending.length > 0 || carryOvers.length > 0) && (
           <section>
             <h3 className="font-extrabold text-purple-900 text-lg mb-2 flex items-center gap-2">
               ⏳ Venter på godkjenning{" "}
               <span className="text-purple-400 text-sm font-medium">
-                ({groupedTasks.pending.length})
+                ({groupedTasks.pending.length + carryOvers.length})
               </span>
             </h3>
             <div className="grid gap-2">
@@ -530,6 +564,27 @@ function ChildPage() {
                   >
                     Angre
                   </button>
+                </div>
+              ))}
+              {carryOvers.map(({ task, completion }) => (
+                <div
+                  key={completion.id}
+                  className="card p-3 flex items-center gap-3 bg-gradient-to-r from-amber-50 to-white"
+                >
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                    style={{ background: `${task.color}33` }}
+                  >
+                    {task.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-purple-900 truncate">{task.title}</div>
+                    <div className="text-xs text-amber-700 font-semibold">
+                      Krysset av {describeDateRelative(completion.completion_date, today)} —
+                      voksen har ikke godkjent ennå
+                    </div>
+                  </div>
+                  <div className="text-amber-600 font-bold">{formatKr(completion.reward_ore)}</div>
                 </div>
               ))}
             </div>

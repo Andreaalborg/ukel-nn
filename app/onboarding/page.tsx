@@ -8,6 +8,7 @@ import { useSession } from "@/lib/useSession";
 import { TASK_TEMPLATES, ACTIVITY_PRESETS } from "@/lib/taskTemplates";
 import { ColorPicker, EmojiPicker } from "@/components/EmojiPicker";
 import ProfileAvatar from "@/components/ProfileAvatar";
+import BirthdatePicker from "@/components/BirthdatePicker";
 import SetupNotice from "@/components/SetupNotice";
 
 type KidDraft = {
@@ -234,11 +235,9 @@ export default function OnboardingPage() {
                           placeholder="Navn"
                           className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 outline-none mb-2 font-bold"
                         />
-                        <input
-                          type="date"
+                        <BirthdatePicker
                           value={k.birthdate}
-                          onChange={(e) => updateKid(i, { birthdate: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 outline-none text-sm"
+                          onChange={(iso) => updateKid(i, { birthdate: iso })}
                         />
                       </div>
                       {kids.length > 1 && (

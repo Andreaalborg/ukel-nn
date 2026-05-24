@@ -94,6 +94,33 @@ export function addDays(dateIso: string, days: number): string {
 export const DAY_NAMES = ["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"];
 export const DAY_NAMES_LONG = ["Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"];
 
+/** Returner pending completions for denne oppgaven som ble krysset av FØR i dag,
+ *  men ennå ikke er godkjent eller avvist. Brukes for å vise "krysset av i går
+ *  — venter fortsatt på voksen" på barn-dashbordet. */
+export function getCarryOverCompletions(
+  task: Task,
+  completions: TaskCompletion[],
+  today: string
+): TaskCompletion[] {
+  return completions
+    .filter(
+      (c) =>
+        c.task_id === task.id &&
+        c.status === "pending" &&
+        c.completion_date < today
+    )
+    .sort((a, b) => b.completion_date.localeCompare(a.completion_date));
+}
+
+/** Brukervennlig beskrivelse av "for hvor lenge siden" — for visning i carry-over kort. */
+export function describeDateRelative(dateIso: string, today: string): string {
+  const diff = daysBetween(dateIso, today);
+  if (diff === 1) return "i går";
+  if (diff < 7) return `for ${diff} dager siden`;
+  if (diff < 14) return "forrige uke";
+  return dateIso;
+}
+
 export function describeRecurrence(task: Task): string {
   switch (task.recurrence) {
     case "daily":

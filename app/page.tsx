@@ -13,7 +13,7 @@ import { useSession } from "@/lib/useSession";
 
 export default function Home() {
   const router = useRouter();
-  const { session, loading: sessionLoading } = useSession();
+  const { session, loading: sessionLoading, error: sessionError } = useSession();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +100,21 @@ export default function Home() {
   );
 
   if (!isSupabaseConfigured) return <SetupNotice />;
+
+  if (sessionError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="card p-6 max-w-md text-center space-y-3">
+          <div className="text-5xl">😴</div>
+          <h2 className="text-xl font-bold text-purple-900">Mistet kontakt med serveren</h2>
+          <p className="text-purple-700 text-sm">{sessionError}</p>
+          <button onClick={() => window.location.reload()} className="btn-primary">
+            Last på nytt
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (sessionLoading || loading) {
     return (
