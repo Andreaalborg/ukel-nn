@@ -32,11 +32,22 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative">
+      <div className="w-full max-w-md mb-4">
+        <Link
+          href="/"
+          className="text-purple-600 font-semibold text-sm hover:text-purple-800 inline-flex items-center gap-1"
+        >
+          ← Til forsiden
+        </Link>
+      </div>
       <div className="card w-full max-w-md p-6">
         <div className="text-center mb-6">
-          <div className="text-5xl mb-2 animate-float">🌟</div>
-          <h1 className="text-3xl font-extrabold text-purple-900">Logg inn</h1>
+          <Link href="/" className="inline-flex items-center gap-2 mb-2">
+            <span className="text-3xl animate-float">🌟</span>
+            <span className="text-2xl font-extrabold text-purple-900">Gjøre</span>
+          </Link>
+          <h1 className="text-2xl font-extrabold text-purple-900">Logg inn</h1>
           <p className="text-purple-600 font-medium text-sm">Velkommen tilbake</p>
         </div>
 

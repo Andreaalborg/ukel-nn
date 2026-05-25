@@ -29,11 +29,23 @@ export default function ForgotPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-md mb-4">
+        <Link
+          href="/"
+          className="text-purple-600 font-semibold text-sm hover:text-purple-800 inline-flex items-center gap-1"
+        >
+          ← Til forsiden
+        </Link>
+      </div>
       <div className="card w-full max-w-md p-6">
         <div className="text-center mb-6">
-          <div className="text-5xl mb-2">🔑</div>
-          <h1 className="text-2xl font-extrabold text-purple-900">Glemt passord?</h1>
+          <Link href="/" className="inline-flex items-center gap-2 mb-2">
+            <span className="text-3xl">🌟</span>
+            <span className="text-2xl font-extrabold text-purple-900">Gjøre</span>
+          </Link>
+          <div className="text-3xl mt-2">🔑</div>
+          <h1 className="text-xl font-extrabold text-purple-900">Glemt passord?</h1>
           <p className="text-purple-600 font-medium text-sm">
             Vi sender deg en lenke for å lage nytt passord
           </p>
