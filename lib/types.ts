@@ -3,9 +3,14 @@ export type Role = "child" | "parent";
 export type Household = {
   id: string;
   name: string;
-  plan: "free" | "family" | "family_plus" | "beta";
+  plan: "free" | "trial" | "family" | "family_plus" | "lifetime" | "beta";
   trial_ends_at: string | null;
   subscription_status: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  stripe_price_id: string | null;
+  current_period_end: string | null;
+  lifetime: boolean;
   created_at: string;
   updated_at: string;
 };

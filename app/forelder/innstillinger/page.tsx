@@ -208,13 +208,13 @@ export default function SettingsPage() {
               )}
             </div>
           )}
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-xs font-bold text-purple-500 uppercase">Abonnement:</span>
-            <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full uppercase">
-              {household.plan === "beta" ? "Beta (gratis)" : household.plan}
-            </span>
-          </div>
         </div>
+      </section>
+
+      {/* Abonnement */}
+      <section>
+        <h2 className="text-lg font-extrabold text-purple-900 mb-2">💎 Abonnement</h2>
+        <SubscriptionCard household={household} />
       </section>
 
       {/* Medlemmer */}
@@ -420,6 +420,108 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Abonnement-kort                                                     */
+/* ------------------------------------------------------------------ */
+
+function SubscriptionCard({ household }: { household: Household }) {
+  const [portalBusy, setPortalBusy] = useState(false);
+
+  const planLabel: Record<string, string> = {
+    free: "Gratis",
+    trial: "Prøveperiode",
+    family: "Familie",
+    family_plus: "Familie+",
+    lifetime: "💎 Lifetime",
+    beta: "Beta (gratis)",
+  };
+
+  const statusLabel: Record<string, { label: string; color: string }> = {
+    trialing: { label: "Prøveperiode", color: "bg-blue-100 text-blue-700" },
+    active: { label: "Aktiv", color: "bg-green-100 text-green-700" },
+    past_due: { label: "Betaling feilet", color: "bg-red-100 text-red-700" },
+    canceled: { label: "Avsluttet", color: "bg-gray-100 text-gray-700" },
+    none: { label: "Ingen", color: "bg-gray-100 text-gray-500" },
+  };
+
+  const isPremium =
+    household.lifetime ||
+    household.subscription_status === "active" ||
+    household.subscription_status === "trialing" ||
+    (household.trial_ends_at && new Date(household.trial_ends_at) > new Date());
+
+  const status = statusLabel[household.subscription_status ?? "none"] ?? statusLabel.none;
+
+  const openPortal = async () => {
+    setPortalBusy(true);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      setPortalBusy(false);
+      return;
+    }
+    const res = await fetch("/api/stripe/portal", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    const result = await res.json();
+    setPortalBusy(false);
+    if (result.url) window.location.href = result.url;
+    else alert(result.error ?? "Kunne ikke åpne abonnement-portal");
+  };
+
+  return (
+    <div className="card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs font-bold text-purple-500 uppercase">Plan</div>
+          <div className="font-extrabold text-purple-900 text-lg">
+            {planLabel[household.plan] ?? household.plan}
+          </div>
+        </div>
+        <span className={`text-xs font-bold px-2 py-1 rounded-full ${status.color}`}>
+          {status.label}
+        </span>
+      </div>
+
+      {household.trial_ends_at &&
+        household.subscription_status === "trialing" && (
+          <div className="bg-blue-50 text-blue-900 text-xs font-semibold p-2 rounded-xl">
+            🎁 Prøveperiode varer til{" "}
+            {new Date(household.trial_ends_at).toLocaleDateString("nb-NO")}
+          </div>
+        )}
+
+      {household.current_period_end &&
+        household.subscription_status === "active" &&
+        !household.lifetime && (
+          <div className="text-xs text-purple-500">
+            Fornyes neste gang:{" "}
+            {new Date(household.current_period_end).toLocaleDateString("nb-NO")}
+          </div>
+        )}
+
+      <div className="flex flex-col sm:flex-row gap-2 pt-2">
+        {!isPremium && (
+          <Link href="/forelder/oppgrader" className="btn-primary flex-1 text-center">
+            💎 Oppgrader til Premium
+          </Link>
+        )}
+        {household.stripe_customer_id && (
+          <button
+            onClick={openPortal}
+            disabled={portalBusy}
+            className="btn-ghost flex-1 disabled:opacity-50"
+          >
+            {portalBusy ? "Åpner..." : "Behandle abonnement"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

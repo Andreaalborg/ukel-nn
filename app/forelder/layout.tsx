@@ -20,6 +20,7 @@ const SECONDARY_NAV = [
   { href: "/forelder/strekk", label: "Strekk", icon: "🔥" },
   { href: "/forelder/statistikk", label: "Statistikk", icon: "📊" },
   { href: "/forelder/profiler", label: "Profiler", icon: "👥" },
+  { href: "/forelder/oppgrader", label: "Oppgrader", icon: "💎" },
   { href: "/forelder/innstillinger", label: "Innstillinger", icon: "⚙️" },
 ];
 
