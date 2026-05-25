@@ -74,45 +74,45 @@ export default function LandingPage() {
           <p className="text-xs text-purple-500 mt-4">
             Ingen kortinformasjon kreves · Avbryt når du vil
           </p>
-
-          {/* App Store / Play Store badges — kommer snart */}
-          <div className="mt-8 flex flex-col items-center gap-3">
-            <p className="text-xs font-bold text-purple-500 uppercase tracking-wider">
-              Native app kommer snart
-            </p>
-            <div className="flex flex-wrap justify-center items-center gap-3">
-              <div className="relative group cursor-not-allowed" aria-label="App Store — kommer snart">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/app-store-badge.svg"
-                  alt="Kommer snart i App Store"
-                  className="h-14 sm:h-16 opacity-70 grayscale group-hover:opacity-90 transition"
-                />
-                <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
-                  SNART
-                </div>
-              </div>
-              <div className="relative group cursor-not-allowed" aria-label="Google Play — kommer snart">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/google-play-badge.svg"
-                  alt="Kommer snart i Google Play"
-                  className="h-14 sm:h-16 opacity-70 grayscale group-hover:opacity-90 transition"
-                />
-                <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
-                  SNART
-                </div>
-              </div>
-            </div>
-            <p className="text-[11px] text-purple-400">
-              Frem til da: webappen funker på alle enheter — legg den til på
-              hjem-skjermen for app-følelse
-            </p>
-          </div>
         </div>
 
         {/* Phone mockup */}
         <PhoneMockup />
+
+        {/* App Store / Play Store badges — kommer snart (under mockup) */}
+        <div className="mt-12 flex flex-col items-center gap-3">
+          <p className="text-xs font-bold text-purple-500 uppercase tracking-wider">
+            Native app kommer snart
+          </p>
+          <div className="flex flex-wrap justify-center items-center gap-3">
+            <div className="relative cursor-not-allowed" aria-label="App Store — kommer snart">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/app-store-badge.svg"
+                alt="Kommer snart i App Store"
+                className="h-14 sm:h-16 opacity-70 grayscale"
+              />
+              <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
+                SNART
+              </div>
+            </div>
+            <div className="relative cursor-not-allowed" aria-label="Google Play — kommer snart">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/google-play-badge.svg"
+                alt="Kommer snart i Google Play"
+                className="h-14 sm:h-16 opacity-70 grayscale"
+              />
+              <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
+                SNART
+              </div>
+            </div>
+          </div>
+          <p className="text-[11px] text-purple-400 text-center max-w-md">
+            Frem til da: webappen funker på alle enheter — legg den til på
+            hjem-skjermen for app-følelse
+          </p>
+        </div>
       </section>
 
       {/* Hvordan det funker */}
