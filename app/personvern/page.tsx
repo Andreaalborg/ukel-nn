@@ -25,17 +25,18 @@ export default function PersonvernPage() {
           <p>
             <strong>Intellisense AS</strong>
             <br />
-            Org.nr: [ORG.NR — sett inn fra Brønnøysundregistrene]
+            Org.nr: 933 698 262
             <br />
-            Adresse: [DIN ADRESSE]
-            <br />
-            E-post: [DIN E-POST FOR PERSONVERN]
+            E-post:{" "}
+            <a className="underline" href="mailto:andreaalborg@intellisenseai.no">
+              andreaalborg@intellisenseai.no
+            </a>
           </p>
         </div>
         <p>
-          Intellisense AS er dataansvarlig for behandling av personopplysninger i Gjøre.
-          Henvendelser om personvern, innsyn, retting eller sletting kan sendes til
-          adressen over.
+          Intellisense AS (org.nr 933 698 262) er dataansvarlig for behandling av
+          personopplysninger i Gjøre. Henvendelser om personvern, innsyn, retting eller
+          sletting kan sendes til e-posten over. Vi svarer innen 30 dager.
         </p>
 
         <h2 className="text-2xl font-bold mt-6">2. Hvilke opplysninger vi behandler</h2>
@@ -198,8 +199,11 @@ export default function PersonvernPage() {
 
         <h2 className="text-2xl font-bold mt-6">11. Kontakt</h2>
         <p>
-          Spørsmål om personvern? Send oss en e-post til [DIN E-POST FOR PERSONVERN].
-          Vi svarer innen 30 dager.
+          Spørsmål om personvern? Send oss en e-post til{" "}
+          <a className="underline" href="mailto:andreaalborg@intellisenseai.no">
+            andreaalborg@intellisenseai.no
+          </a>
+          . Vi svarer innen 30 dager.
         </p>
 
         <hr className="my-8 border-purple-200" />

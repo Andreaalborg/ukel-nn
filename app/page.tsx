@@ -8,6 +8,7 @@ import type { Profile } from "@/lib/types";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import PinPad from "@/components/PinPad";
 import SetupNotice from "@/components/SetupNotice";
+import LegalFooter from "@/components/LegalFooter";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSession } from "@/lib/useSession";
 
@@ -193,6 +194,9 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
+      <div className="mt-12">
+        <LegalFooter />
+      </div>
     </div>
   );
 }

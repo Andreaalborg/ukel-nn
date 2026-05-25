@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import SetupNotice from "@/components/SetupNotice";
+import LegalFooter from "@/components/LegalFooter";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -87,6 +88,9 @@ export default function SignInPage() {
             </Link>
           </div>
         </div>
+      </div>
+      <div className="absolute bottom-0 left-0 right-0">
+        <LegalFooter />
       </div>
     </div>
   );

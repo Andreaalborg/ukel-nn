@@ -22,8 +22,9 @@ export default function VilkarPage() {
 
         <h2 className="text-2xl font-bold mt-6">1. Om tjenesten</h2>
         <p>
-          Gjøre er en familieapp for ukeslønn og oppgavehåndtering levert av Intellisense AS
-          (org.nr [ORG.NR]). Ved å bruke tjenesten aksepterer du disse vilkårene.
+          Gjøre er en familieapp for ukeslønn og oppgavehåndtering levert av{" "}
+          <strong>Intellisense AS</strong> (org.nr 933 698 262). Ved å bruke tjenesten
+          aksepterer du disse vilkårene.
         </p>
 
         <h2 className="text-2xl font-bold mt-6">2. Hvem kan bruke tjenesten</h2>
@@ -115,13 +116,17 @@ export default function VilkarPage() {
 
         <h2 className="text-2xl font-bold mt-6">11. Lovvalg og verneting</h2>
         <p>
-          Norsk rett gjelder. Tvister forsøkes løst i minnelighet. Hvis ikke, er
-          [DIN HJEMKOMMUNE] tingrett verneting.
+          Norsk rett gjelder. Tvister forsøkes løst i minnelighet. Hvis ikke, behandles
+          tvister ved norske domstoler etter alminnelige vernetingsregler.
         </p>
 
         <h2 className="text-2xl font-bold mt-6">12. Kontakt</h2>
         <p>
-          Spørsmål? Send en e-post til [DIN E-POST] eller skriv via støtte-chat i appen.
+          Spørsmål? Send en e-post til{" "}
+          <a className="underline" href="mailto:andreaalborg@intellisenseai.no">
+            andreaalborg@intellisenseai.no
+          </a>
+          .
         </p>
 
         <hr className="my-8 border-purple-200" />
