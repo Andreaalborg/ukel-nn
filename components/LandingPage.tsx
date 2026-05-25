@@ -86,7 +86,7 @@ export default function LandingPage() {
                 <img
                   src="/app-store-badge.svg"
                   alt="Kommer snart i App Store"
-                  className="h-12 opacity-60 grayscale group-hover:opacity-80 transition"
+                  className="h-14 sm:h-16 opacity-70 grayscale group-hover:opacity-90 transition"
                 />
                 <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
                   SNART
@@ -97,7 +97,7 @@ export default function LandingPage() {
                 <img
                   src="/google-play-badge.svg"
                   alt="Kommer snart i Google Play"
-                  className="h-12 opacity-60 grayscale group-hover:opacity-80 transition"
+                  className="h-14 sm:h-16 opacity-70 grayscale group-hover:opacity-90 transition"
                 />
                 <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
                   SNART
