@@ -11,6 +11,8 @@ export default function SignUpPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [parentalConsent, setParentalConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -23,6 +25,14 @@ export default function SignUpPage() {
     setInfo(null);
     if (password.length < MIN_PASSWORD_LENGTH) {
       setError(`Passord må være minst ${MIN_PASSWORD_LENGTH} tegn`);
+      return;
+    }
+    if (!acceptTerms) {
+      setError("Du må godta brukervilkår og personvernerklæring");
+      return;
+    }
+    if (!parentalConsent) {
+      setError("Du må bekrefte foreldresamtykke");
       return;
     }
     setLoading(true);
@@ -81,6 +91,39 @@ export default function SignUpPage() {
             />
             <PasswordStrength password={password} />
           </div>
+          <div className="space-y-2 pt-2 border-t border-purple-100">
+            <label className="flex items-start gap-2 text-xs text-purple-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={acceptTerms}
+                onChange={(e) => setAcceptTerms(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-purple-600"
+              />
+              <span>
+                Jeg godtar{" "}
+                <Link href="/vilkar" target="_blank" className="underline font-semibold">
+                  brukervilkårene
+                </Link>{" "}
+                og{" "}
+                <Link href="/personvern" target="_blank" className="underline font-semibold">
+                  personvernerklæringen
+                </Link>
+              </span>
+            </label>
+            <label className="flex items-start gap-2 text-xs text-purple-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={parentalConsent}
+                onChange={(e) => setParentalConsent(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-purple-600"
+              />
+              <span>
+                Jeg er forelder/verge til barna jeg legger inn, og samtykker til
+                behandling av deres opplysninger (GDPR art. 8)
+              </span>
+            </label>
+          </div>
+
           {error && (
             <div className="bg-red-50 text-red-700 text-sm font-semibold p-3 rounded-xl">{error}</div>
           )}

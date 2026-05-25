@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import CookieBanner from "@/components/CookieBanner";
 
 export const metadata: Metadata = {
-  title: "Ukeslønn",
-  description: "Familieapp for ukeslønn og oppgaver",
+  title: "Gjøre — ukeslønn og oppgaver for familien",
+  description: "Familieapp for ukeslønn og oppgaver — Gjøre gjør barna til helter",
 };
 
 export const viewport: Viewport = {
@@ -18,7 +19,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="nb" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <CookieBanner />
+      </body>
     </html>
   );
 }
