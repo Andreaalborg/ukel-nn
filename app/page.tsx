@@ -9,6 +9,7 @@ import ProfileAvatar from "@/components/ProfileAvatar";
 import PinPad from "@/components/PinPad";
 import SetupNotice from "@/components/SetupNotice";
 import LegalFooter from "@/components/LegalFooter";
+import LandingPage from "@/components/LandingPage";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSession } from "@/lib/useSession";
 
@@ -77,7 +78,8 @@ export default function Home() {
     }
     if (sessionLoading) return;
     if (!session) {
-      router.replace("/auth/signin");
+      // Vis landingsside for ikke-innloggede (bestemmes i render)
+      setLoading(false);
       return;
     }
     loadProfiles();
@@ -123,6 +125,11 @@ export default function Home() {
         <div className="text-6xl animate-float">🌟</div>
       </div>
     );
+  }
+
+  // Ikke innlogget? Vis landingsside.
+  if (!session) {
+    return <LandingPage />;
   }
 
   if (error) {
