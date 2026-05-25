@@ -74,6 +74,41 @@ export default function LandingPage() {
           <p className="text-xs text-purple-500 mt-4">
             Ingen kortinformasjon kreves · Avbryt når du vil
           </p>
+
+          {/* App Store / Play Store badges — kommer snart */}
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <p className="text-xs font-bold text-purple-500 uppercase tracking-wider">
+              Native app kommer snart
+            </p>
+            <div className="flex flex-wrap justify-center items-center gap-3">
+              <div className="relative group cursor-not-allowed" aria-label="App Store — kommer snart">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/app-store-badge.svg"
+                  alt="Kommer snart i App Store"
+                  className="h-12 opacity-60 grayscale group-hover:opacity-80 transition"
+                />
+                <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
+                  SNART
+                </div>
+              </div>
+              <div className="relative group cursor-not-allowed" aria-label="Google Play — kommer snart">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/google-play-badge.svg"
+                  alt="Kommer snart i Google Play"
+                  className="h-12 opacity-60 grayscale group-hover:opacity-80 transition"
+                />
+                <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
+                  SNART
+                </div>
+              </div>
+            </div>
+            <p className="text-[11px] text-purple-400">
+              Frem til da: webappen funker på alle enheter — legg den til på
+              hjem-skjermen for app-følelse
+            </p>
+          </div>
         </div>
 
         {/* Phone mockup */}
@@ -176,58 +211,6 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Kommer snart — mobil-apper */}
-      <section className="px-4 sm:px-6 py-16 bg-white">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-block bg-amber-100 text-amber-900 text-xs font-bold px-3 py-1 rounded-full mb-4">
-            👀 KOMMER SNART
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-purple-900 mb-3">
-            Ekte mobil-app i 2026
-          </h2>
-          <p className="text-purple-700 max-w-2xl mx-auto mb-8">
-            Akkurat nå funker Gjøre som webapp på alle enheter — du kan legge den til
-            på hjemskjermen på iPhone og Android for å bruke den som en vanlig app.
-            Native iOS- og Android-app kommer i App Store og Google Play så snart vi
-            har validert produktet med våre første brukere.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-            {/* App Store badge */}
-            <div className="relative">
-              <div className="bg-black text-white px-5 py-2.5 rounded-xl flex items-center gap-3 opacity-70">
-                <span className="text-3xl">📱</span>
-                <div className="text-left">
-                  <div className="text-[9px] opacity-80">Snart i</div>
-                  <div className="text-lg font-bold leading-tight">App Store</div>
-                </div>
-              </div>
-              <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
-                SNART
-              </div>
-            </div>
-
-            {/* Google Play badge */}
-            <div className="relative">
-              <div className="bg-black text-white px-5 py-2.5 rounded-xl flex items-center gap-3 opacity-70">
-                <span className="text-3xl">▶️</span>
-                <div className="text-left">
-                  <div className="text-[9px] opacity-80">Snart i</div>
-                  <div className="text-lg font-bold leading-tight">Google Play</div>
-                </div>
-              </div>
-              <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
-                SNART
-              </div>
-            </div>
-          </div>
-
-          <p className="text-xs text-purple-500 mt-6">
-            💡 Tips: På iPhone — åpne i Safari, trykk Del-ikonet, så &quot;Legg til på Hjem-skjerm&quot;
-          </p>
         </div>
       </section>
 
