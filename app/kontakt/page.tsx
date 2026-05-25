@@ -31,17 +31,6 @@ export default function KontaktPage() {
           </div>
 
           <div>
-            <div className="text-xs font-bold text-purple-500 uppercase">Adresse</div>
-            <div className="text-purple-900">
-              Holbergs vei 38
-              <br />
-              1412 Sofiemyr
-              <br />
-              Norge
-            </div>
-          </div>
-
-          <div>
             <div className="text-xs font-bold text-purple-500 uppercase">E-post</div>
             <a
               href="mailto:andreaalborg@intellisenseai.no"
@@ -49,6 +38,9 @@ export default function KontaktPage() {
             >
               andreaalborg@intellisenseai.no
             </a>
+            <div className="text-xs text-purple-500 mt-1">
+              Bruk e-post for all kontakt — vi svarer raskt.
+            </div>
           </div>
         </div>
 
