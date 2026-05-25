@@ -18,12 +18,20 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen">
+      {/* Beta-banner øverst */}
+      <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-center text-xs sm:text-sm font-semibold py-2 px-4">
+        🚀 Vi er i tidlig beta — bli en av de første familiene! Gratis å prøve.
+      </div>
+
       {/* Top bar */}
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-purple-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-2xl">🌟</span>
             <span className="font-extrabold text-purple-900 text-xl">Gjøre</span>
+            <span className="bg-amber-100 text-amber-900 text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase">
+              Beta
+            </span>
           </Link>
           <div className="flex items-center gap-2">
             <Link
@@ -168,6 +176,58 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Kommer snart — mobil-apper */}
+      <section className="px-4 sm:px-6 py-16 bg-white">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="inline-block bg-amber-100 text-amber-900 text-xs font-bold px-3 py-1 rounded-full mb-4">
+            👀 KOMMER SNART
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-purple-900 mb-3">
+            Ekte mobil-app i 2026
+          </h2>
+          <p className="text-purple-700 max-w-2xl mx-auto mb-8">
+            Akkurat nå funker Gjøre som webapp på alle enheter — du kan legge den til
+            på hjemskjermen på iPhone og Android for å bruke den som en vanlig app.
+            Native iOS- og Android-app kommer i App Store og Google Play så snart vi
+            har validert produktet med våre første brukere.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+            {/* App Store badge */}
+            <div className="relative">
+              <div className="bg-black text-white px-5 py-2.5 rounded-xl flex items-center gap-3 opacity-70">
+                <span className="text-3xl">📱</span>
+                <div className="text-left">
+                  <div className="text-[9px] opacity-80">Snart i</div>
+                  <div className="text-lg font-bold leading-tight">App Store</div>
+                </div>
+              </div>
+              <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
+                SNART
+              </div>
+            </div>
+
+            {/* Google Play badge */}
+            <div className="relative">
+              <div className="bg-black text-white px-5 py-2.5 rounded-xl flex items-center gap-3 opacity-70">
+                <span className="text-3xl">▶️</span>
+                <div className="text-left">
+                  <div className="text-[9px] opacity-80">Snart i</div>
+                  <div className="text-lg font-bold leading-tight">Google Play</div>
+                </div>
+              </div>
+              <div className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">
+                SNART
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs text-purple-500 mt-6">
+            💡 Tips: På iPhone — åpne i Safari, trykk Del-ikonet, så &quot;Legg til på Hjem-skjerm&quot;
+          </p>
         </div>
       </section>
 
@@ -354,7 +414,11 @@ export default function LandingPage() {
               },
               {
                 q: "Funker det på iPhone / iPad / PC?",
-                a: "Ja, det er en webapp som funker overalt. Du kan legge den til på hjemskjermen på telefonen for å bruke den som en vanlig app. Native iOS- og Android-app kommer senere.",
+                a: "Ja, det er en webapp som funker overalt akkurat nå. Du kan legge den til på hjemskjermen på telefonen for å bruke den som en vanlig app. Native iOS- og Android-app kommer i App Store og Google Play så snart vi har validert produktet med våre første brukere.",
+              },
+              {
+                q: "Hva betyr 'tidlig beta'?",
+                a: "Vi er i aktiv utvikling og legger til nye funksjoner hver uke basert på tilbakemeldinger fra brukerne våre. Som tidlig bruker får du være med og forme appen — og du betaler ingenting før vi går ut av beta.",
               },
             ].map((f) => (
               <details key={f.q} className="card p-4 group">
