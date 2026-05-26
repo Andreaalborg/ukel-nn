@@ -35,9 +35,9 @@ export default function VilkarPage() {
           <li>Du må holde innloggingsdetaljer (e-post, passord, PIN) hemmelig</li>
         </ul>
 
-        <h2 className="text-2xl font-bold mt-6">3. Foreldresamtykke</h2>
+        <h2 className="text-2xl font-bold mt-6">3. Foreldresamtykke (GDPR art. 8)</h2>
         <p>
-          Ved å legge til et barn i appen bekrefter du at:
+          Ved å akseptere disse vilkårene og legge til et barn i appen bekrefter du at:
         </p>
         <ul className="list-disc pl-6 space-y-1">
           <li>Du er forelder eller verge til barnet</li>
@@ -45,6 +45,10 @@ export default function VilkarPage() {
           <li>Du samtykker på vegne av barnet til behandlingen som beskrevet i personvernerklæringen</li>
           <li>Du har, der det er aktuelt, informert den andre forelder</li>
         </ul>
+        <p className="text-sm text-purple-600 mt-2">
+          Dette samtykket gis automatisk når du krysser av for å godta vilkår og personvernerklæring
+          ved registrering, og kan trekkes tilbake når som helst ved å slette kontoen.
+        </p>
 
         <h2 className="text-2xl font-bold mt-6">4. Abonnement og betaling</h2>
         <ul className="list-disc pl-6 space-y-1">

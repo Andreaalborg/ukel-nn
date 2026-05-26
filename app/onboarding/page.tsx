@@ -328,18 +328,47 @@ export default function OnboardingPage() {
                 </p>
               </div>
               <div className="space-y-3">
-                {(Object.entries(ACTIVITY_PRESETS) as ["easy" | "medium" | "high", typeof ACTIVITY_PRESETS.easy][]).map(([key, preset]) => (
-                  <button
-                    key={key}
-                    onClick={() => setActivity(key)}
-                    className={`card w-full p-4 text-left transition-all ${
-                      activity === key ? "ring-4 ring-purple-400 bg-purple-50" : ""
-                    }`}
-                  >
-                    <div className="font-extrabold text-purple-900">{preset.label}</div>
-                    <div className="text-sm text-purple-600">{preset.description}</div>
-                  </button>
-                ))}
+                {(Object.entries(ACTIVITY_PRESETS) as ["easy" | "medium" | "high", typeof ACTIVITY_PRESETS.easy][]).map(([key, preset]) => {
+                  const selected = activity === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setActivity(key)}
+                      className={`card w-full p-4 text-left transition-all flex items-center gap-3 ${
+                        selected
+                          ? "ring-4 ring-purple-500 bg-gradient-to-br from-purple-100 to-pink-50 scale-[1.02] shadow-lg"
+                          : "hover:bg-purple-50"
+                      }`}
+                    >
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                          selected
+                            ? "bg-gradient-to-br from-purple-600 to-pink-600 text-white"
+                            : "border-2 border-purple-200"
+                        }`}
+                      >
+                        {selected ? "✓" : ""}
+                      </div>
+                      <div className="flex-1">
+                        <div className={`font-extrabold ${selected ? "text-purple-900" : "text-purple-800"}`}>
+                          {preset.label}
+                        </div>
+                        <div className="text-sm text-purple-600">{preset.description}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+
+                {/* Skip-knapp */}
+                <button
+                  onClick={() => {
+                    setSelectedTaskIds([]);
+                    setStep(5);
+                  }}
+                  className="w-full text-center text-sm font-semibold text-purple-500 hover:text-purple-700 py-3"
+                >
+                  Hopp over — jeg legger til oppgaver selv senere →
+                </button>
               </div>
             </motion.div>
           )}

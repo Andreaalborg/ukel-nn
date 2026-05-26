@@ -13,7 +13,6 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [parentalConsent, setParentalConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -29,11 +28,7 @@ export default function SignUpPage() {
       return;
     }
     if (!acceptTerms) {
-      setError("Du må godta brukervilkår og personvernerklæring");
-      return;
-    }
-    if (!parentalConsent) {
-      setError("Du må bekrefte foreldresamtykke");
+      setError("Du må godta brukervilkårene og personvernerklæringen");
       return;
     }
     setLoading(true);
@@ -103,7 +98,7 @@ export default function SignUpPage() {
             />
             <PasswordStrength password={password} />
           </div>
-          <div className="space-y-2 pt-2 border-t border-purple-100">
+          <div className="pt-2 border-t border-purple-100">
             <label className="flex items-start gap-2 text-xs text-purple-700 cursor-pointer">
               <input
                 type="checkbox"
@@ -120,18 +115,8 @@ export default function SignUpPage() {
                 <Link href="/personvern" target="_blank" className="underline font-semibold">
                   personvernerklæringen
                 </Link>
-              </span>
-            </label>
-            <label className="flex items-start gap-2 text-xs text-purple-700 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={parentalConsent}
-                onChange={(e) => setParentalConsent(e.target.checked)}
-                className="mt-0.5 w-4 h-4 accent-purple-600"
-              />
-              <span>
-                Jeg er forelder/verge til barna jeg legger inn, og samtykker til
-                behandling av deres opplysninger (GDPR art. 8)
+                . Som forelder/verge samtykker jeg til behandling av barnas opplysninger
+                som beskrevet (GDPR art. 8).
               </span>
             </label>
           </div>

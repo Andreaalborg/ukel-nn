@@ -323,7 +323,7 @@ export default function LandingPage() {
                 <li>✓ Strekk-bonus</li>
                 <li>✓ Co-parent invite</li>
                 <li>✓ Full statistikk og historikk</li>
-                <li>✓ 14 dagers gratis prøve uten kort</li>
+                <li>✓ 14 dagers gratis prøveperiode uten kort</li>
               </ul>
               <Link
                 href="/auth/signup"
@@ -336,7 +336,7 @@ export default function LandingPage() {
             {/* Lifetime */}
             <div className="card p-6 flex flex-col bg-gradient-to-br from-amber-50 to-orange-50 ring-2 ring-amber-300 relative">
               <div className="absolute -top-3 right-4 bg-amber-400 text-amber-900 text-xs font-extrabold px-3 py-1 rounded-full shadow-lg">
-                💎 BESTE VERDI
+                💎 MEST VERDI
               </div>
               <div className="text-sm font-bold text-amber-700 uppercase">Lifetime</div>
               <div className="text-3xl font-extrabold text-purple-900 mt-1">599 kr</div>

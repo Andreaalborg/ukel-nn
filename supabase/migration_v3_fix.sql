@@ -23,8 +23,8 @@ begin
     raise exception 'Not authenticated';
   end if;
 
-  insert into households (name, plan)
-  values (coalesce(nullif(trim(p_name), ''), 'Min familie'), 'beta')
+  insert into households (name, plan, subscription_status)
+  values (coalesce(nullif(trim(p_name), ''), 'Min familie'), 'free', 'none')
   returning id into new_household_id;
 
   insert into household_members (household_id, user_id, role, display_name)
