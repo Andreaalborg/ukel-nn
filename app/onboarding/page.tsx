@@ -151,15 +151,9 @@ export default function OnboardingPage() {
         if (tErr) throw tErr;
       }
 
-      // 5) Standard strekk-bonus
-      await supabase.from("streak_rewards").insert({
-        household_id: householdId,
-        title: "3-på-rad-bonus",
-        description: "Nå Level 10 i tre perioder på rad",
-        icon: "🔥",
-        required_streak: 3,
-        reward_ore: 5000,
-      });
+      // (Tidligere opprettet vi en standard 3-på-rad-bonus her,
+      //  men det er nå opp til familien å lage egne premier og streaks
+      //  som passer for dem.)
 
       // 6) Lagre household_id og gå videre
       setCurrentHouseholdId(householdId);
@@ -455,8 +449,9 @@ export default function OnboardingPage() {
                   <div className="text-xs font-bold text-purple-500 uppercase">Startoppgaver</div>
                   <div className="font-extrabold text-purple-900">{selectedTaskIds.length} stk</div>
                 </div>
-                <div className="bg-amber-50 rounded-xl p-3 text-xs text-amber-900 font-semibold">
-                  ✨ Du får også en standard "3-på-rad-bonus" som gir 50 kr når et barn når Level 10 tre perioder på rad.
+                <div className="bg-purple-50 rounded-xl p-3 text-xs text-purple-700 font-semibold">
+                  ✨ Du kan når som helst lage egne premier og streaks tilpasset familien
+                  din under fanene <strong>Premier</strong> og <strong>Streak</strong>.
                 </div>
               </div>
 

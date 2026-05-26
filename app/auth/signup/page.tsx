@@ -7,6 +7,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import SetupNotice from "@/components/SetupNotice";
 import PasswordStrength, { MIN_PASSWORD_LENGTH } from "@/components/PasswordStrength";
 import LegalFooter from "@/components/LegalFooter";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -115,8 +116,6 @@ export default function SignUpPage() {
                 <Link href="/personvern" target="_blank" className="underline font-semibold">
                   personvernerklæringen
                 </Link>
-                . Som forelder/verge samtykker jeg til behandling av barnas opplysninger
-                som beskrevet (GDPR art. 8).
               </span>
             </label>
           </div>
@@ -135,6 +134,17 @@ export default function SignUpPage() {
             {loading ? "Oppretter..." : "Lag konto"}
           </button>
         </form>
+
+        <div className="my-4 flex items-center gap-3">
+          <div className="flex-1 h-px bg-purple-100" />
+          <span className="text-xs font-bold text-purple-400 uppercase">eller</span>
+          <div className="flex-1 h-px bg-purple-100" />
+        </div>
+
+        <GoogleSignInButton label="Fortsett med Google" />
+        <p className="text-[10px] text-purple-400 text-center mt-2">
+          Ved å fortsette med Google godtar du våre vilkår.
+        </p>
 
         <div className="text-center mt-4 text-sm text-purple-700">
           Har du allerede konto?{" "}

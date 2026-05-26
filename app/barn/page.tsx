@@ -151,7 +151,7 @@ function ChildPage() {
       }, 0);
   }, [completions, tasks, currentPeriod]);
 
-  // Aktiv strekk: hvor mange perioder på rad med max level
+  // Aktiv streak: hvor mange perioder på rad med max level
   const currentStreak = useMemo(() => {
     let streak = 0;
     for (const a of achievements) {
@@ -378,14 +378,14 @@ function ChildPage() {
             <div className="font-extrabold">{formatKr(periodEarned)}</div>
           </div>
           <div className="bg-white/20 backdrop-blur rounded-2xl py-2">
-            <div className="text-xs opacity-80">🔥 Strekk</div>
+            <div className="text-xs opacity-80">🔥 Streak</div>
             <div className="font-extrabold">{currentStreak}</div>
           </div>
         </div>
       </div>
 
       <div className="px-5 mt-6 space-y-6">
-        {/* Strekk-info */}
+        {/* Streak-info */}
         {streakRewards.length > 0 && (
           <section>
             {streakRewards

@@ -170,6 +170,8 @@ export type StreakReward = {
   description: string | null;
   icon: string;
   required_streak: number;
+  target_level: number;
+  auto_award: boolean;
   reward_ore: number;
   active: boolean;
   created_at: string;

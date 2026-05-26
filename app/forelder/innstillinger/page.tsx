@@ -396,7 +396,7 @@ export default function SettingsPage() {
               <ul className="text-sm text-purple-700 text-left list-disc pl-6 mt-2">
                 <li>Husholdningen, barn-profiler og PIN</li>
                 <li>Alle oppgaver, fullføringer og saldoer</li>
-                <li>Bonuser, perioder og strekk-historikk</li>
+                <li>Bonuser, perioder og streak-historikk</li>
                 <li>Din innlogging og e-postkonto i appen</li>
               </ul>
               <p className="text-sm text-red-600 font-bold mt-3">

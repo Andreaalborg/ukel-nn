@@ -17,24 +17,28 @@ type Draft = {
   description: string;
   icon: string;
   required_streak: number;
+  target_level: number;
   reward_kr: number;
+  auto_award: boolean;
   active: boolean;
 };
 
 const EMPTY: Draft = {
   child_id: null,
-  title: "3-på-rad-bonus",
-  description: "Nå level 10 i tre perioder på rad",
+  title: "Streak-bonus",
+  description: "Nå et høyt nivå flere perioder på rad",
   icon: "🔥",
   required_streak: 3,
+  target_level: 10,
   reward_kr: 50,
+  auto_award: false,
   active: true,
 };
 
 export default function StreakPageWrapper() {
   return (
     <PremiumGate
-      feature="Strekk-bonus krever Premium"
+      feature="Streak-bonus krever Premium"
       description="Belønn barn som når Level 10 flere perioder på rad. Motiverer til langsiktig innsats. Tilgjengelig i Familie- og Lifetime-pakkene."
     >
       <StreakPage />
@@ -85,7 +89,9 @@ function StreakPage() {
       description: editing.description.trim() || null,
       icon: editing.icon,
       required_streak: Math.max(2, editing.required_streak),
+      target_level: Math.max(1, Math.min(10, editing.target_level)),
       reward_ore: kronerToOre(editing.reward_kr),
+      auto_award: editing.auto_award,
       active: editing.active,
     };
     if (editing.id) {
@@ -98,19 +104,23 @@ function StreakPage() {
   };
 
   const del = async (id: string) => {
-    if (!confirm("Slette strekk-bonusen?")) return;
+    if (!confirm("Slette streak-bonusen?")) return;
     await supabase.from("streak_rewards").delete().eq("id", id);
     reload();
   };
 
-  const currentStreak = (childId: string): number => {
+  /** Antall perioder på rad hvor barnet nådde minst targetLevel. */
+  const streakForLevel = (childId: string, targetLevel: number): number => {
     let streak = 0;
     for (const a of achievements.filter((a) => a.child_id === childId)) {
-      if (a.reached_max) streak++;
+      if (a.max_level >= targetLevel) streak++;
       else break;
     }
     return streak;
   };
+
+  // Bakoverkompatibel: bruker level 10 som default
+  const currentStreak = (childId: string): number => streakForLevel(childId, 10);
 
   const awardStreak = async (reward: StreakReward, kid: Profile, streakCount: number) => {
     if (!householdId) return;
@@ -143,7 +153,7 @@ function StreakPage() {
     <div className="space-y-4">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold text-purple-900">Strekk-bonus</h1>
+          <h1 className="text-3xl font-extrabold text-purple-900">Streak-bonus</h1>
           <p className="text-purple-600 font-medium text-sm">
             Premier for å nå max level flere perioder på rad
           </p>
@@ -154,12 +164,12 @@ function StreakPage() {
       </header>
 
       <div className="bg-orange-50 rounded-2xl p-3 text-xs text-orange-900 font-semibold">
-        🔥 Hvordan det virker: Når en periode avsluttes med Level 10 oppnådd, øker strekk-telleren. Når barnet når kravet (f.eks. 3 perioder på rad), kan du gi bonusen — eller den gis automatisk i historikken.
+        🔥 Hvordan det virker: Når en periode avsluttes med Level 10 oppnådd, øker streak-telleren. Når barnet når kravet (f.eks. 3 perioder på rad), kan du gi bonusen — eller den gis automatisk i historikken.
       </div>
 
-      {/* Aktive strekk per barn */}
+      {/* Aktive streak per barn */}
       <section>
-        <h2 className="text-lg font-extrabold text-purple-900 mb-2">Aktive strekk</h2>
+        <h2 className="text-lg font-extrabold text-purple-900 mb-2">Aktive streak</h2>
         <div className="grid sm:grid-cols-2 gap-3">
           {kids.map((kid) => {
             const streak = currentStreak(kid.id);
@@ -204,8 +214,13 @@ function StreakPage() {
                         <div className="text-xs text-purple-500">{r.description}</div>
                       )}
                       <div className="text-xs text-purple-700 font-bold mt-1">
-                        Krav: {r.required_streak} perioder på rad · Premie: {formatKr(r.reward_ore)}
+                        Nå Level {r.target_level ?? 10} i {r.required_streak} perioder på rad · {formatKr(r.reward_ore)}
                       </div>
+                      {r.auto_award && (
+                        <div className="text-[10px] text-green-700 font-bold mt-0.5">
+                          ⚡ Auto-tildeling på
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={() =>
@@ -216,7 +231,9 @@ function StreakPage() {
                           description: r.description ?? "",
                           icon: r.icon,
                           required_streak: r.required_streak,
+                          target_level: r.target_level ?? 10,
                           reward_kr: r.reward_ore / 100,
+                          auto_award: r.auto_award ?? false,
                           active: r.active,
                         })
                       }
@@ -231,7 +248,7 @@ function StreakPage() {
 
                   <div className="space-y-2">
                     {targets.map((kid) => {
-                      const s = currentStreak(kid.id);
+                      const s = streakForLevel(kid.id, r.target_level ?? 10);
                       const reached = s >= r.required_streak;
                       const claimed = hasClaimedThisStreak(r, kid.id, r.required_streak);
                       const pct = Math.min(100, (s / r.required_streak) * 100);
@@ -280,7 +297,7 @@ function StreakPage() {
           {rewards.length === 0 && (
             <div className="card p-6 text-center">
               <div className="text-4xl mb-1">🔥</div>
-              <p className="font-bold text-purple-900">Ingen strekk-bonus enda</p>
+              <p className="font-bold text-purple-900">Ingen streak-bonus enda</p>
               <p className="text-sm text-purple-500">Lag en bonus for å belønne langsiktig innsats!</p>
             </div>
           )}
@@ -290,7 +307,7 @@ function StreakPage() {
       {/* Tildelt-historikk */}
       {claims.length > 0 && (
         <section>
-          <h2 className="text-lg font-extrabold text-purple-900 mb-2">Tildelte strekk-bonuser</h2>
+          <h2 className="text-lg font-extrabold text-purple-900 mb-2">Tildelte streak-bonuser</h2>
           <div className="grid gap-2">
             {claims.map((c) => {
               const kid = kids.find((k) => k.id === c.child_id);
@@ -327,7 +344,7 @@ function StreakPage() {
           >
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-extrabold text-purple-900">
-                {editing.id ? "Rediger" : "Ny strekk-bonus"}
+                {editing.id ? "Rediger" : "Ny streak-bonus"}
               </h2>
               <button onClick={() => setEditing(null)} className="text-2xl text-purple-400">
                 ✕
@@ -353,7 +370,28 @@ function StreakPage() {
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="block text-sm font-bold text-purple-700 mb-1">
-                  Krav (perioder på rad)
+                  Mål-nivå (per periode)
+                </label>
+                <select
+                  value={editing.target_level}
+                  onChange={(e) =>
+                    setEditing({ ...editing, target_level: Number(e.target.value) })
+                  }
+                  className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 outline-none bg-white"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((l) => (
+                    <option key={l} value={l}>
+                      Level {l}+
+                    </option>
+                  ))}
+                </select>
+                <div className="text-[10px] text-purple-400 mt-1">
+                  Barnet må nå dette nivået for at perioden skal telle
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-purple-700 mb-1">
+                  Antall perioder på rad
                 </label>
                 <input
                   type="number"
@@ -365,16 +403,17 @@ function StreakPage() {
                   className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-bold text-purple-700 mb-1">Premie (kr)</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={editing.reward_kr}
-                  onChange={(e) => setEditing({ ...editing, reward_kr: Number(e.target.value) })}
-                  className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 outline-none"
-                />
-              </div>
+            </div>
+
+            <div className="mb-3">
+              <label className="block text-sm font-bold text-purple-700 mb-1">Premie (kr)</label>
+              <input
+                type="number"
+                min={0}
+                value={editing.reward_kr}
+                onChange={(e) => setEditing({ ...editing, reward_kr: Number(e.target.value) })}
+                className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 outline-none"
+              />
             </div>
 
             <label className="block text-sm font-bold text-purple-700 mb-1">For hvem?</label>
@@ -390,6 +429,38 @@ function StreakPage() {
                 </option>
               ))}
             </select>
+
+            <div className="space-y-2 mb-3">
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-purple-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editing.active}
+                  onChange={(e) => setEditing({ ...editing, active: e.target.checked })}
+                  className="w-5 h-5 accent-purple-600"
+                />
+                <div className="flex-1">
+                  <div className="font-bold text-purple-900 text-sm">Aktiv</div>
+                  <div className="text-xs text-purple-500">
+                    Skru av for å pause uten å slette
+                  </div>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-purple-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editing.auto_award}
+                  onChange={(e) => setEditing({ ...editing, auto_award: e.target.checked })}
+                  className="w-5 h-5 accent-purple-600"
+                />
+                <div className="flex-1">
+                  <div className="font-bold text-purple-900 text-sm">⚡ Auto-tildeling</div>
+                  <div className="text-xs text-purple-500">
+                    Gi bonusen automatisk uten å trykke "Gi premie"
+                  </div>
+                </div>
+              </label>
+            </div>
 
             <label className="block text-sm font-bold text-purple-700 mb-1">Ikon</label>
             <div className="mb-4">

@@ -173,7 +173,7 @@ export default function LandingPage() {
             {[
               {
                 icon: "🏆",
-                title: "Premier og strekk-bonus",
+                title: "Premier og streak-bonus",
                 desc: "Sett ukentlige og månedlige bonuspremier. Når barnet når Level 10 flere perioder på rad, åpnes ekstra belønninger.",
               },
               {
@@ -268,7 +268,7 @@ export default function LandingPage() {
                 <li>✓ Daglig + ukentlig hyppighet</li>
                 <li>✓ Basic statistikk</li>
                 <li className="text-purple-400">✗ Custody-perioder</li>
-                <li className="text-purple-400">✗ Strekk-bonus</li>
+                <li className="text-purple-400">✗ Streak-bonus</li>
                 <li className="text-purple-400">✗ Co-parent invite</li>
               </ul>
               <Link
@@ -320,7 +320,7 @@ export default function LandingPage() {
                 <li>✓ <strong>Ubegrenset</strong> barn og oppgaver</li>
                 <li>✓ Alle oppgavetyper (intervall, dager etc.)</li>
                 <li>✓ Custody-perioder</li>
-                <li>✓ Strekk-bonus</li>
+                <li>✓ Streak-bonus</li>
                 <li>✓ Co-parent invite</li>
                 <li>✓ Full statistikk og historikk</li>
                 <li>✓ 14 dagers gratis prøveperiode uten kort</li>

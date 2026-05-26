@@ -11,7 +11,7 @@ import type {
   Task,
   TaskCompletion,
 } from "@/lib/types";
-import { formatKr, greeting, startOfWeek, todayIso } from "@/lib/utils";
+import { dateLabel, formatKr, greeting, startOfWeek, todayIso } from "@/lib/utils";
 import { xpForTask, getLevel } from "@/lib/levels";
 import { getCurrentPeriod, isDateInWindow } from "@/lib/periods";
 import ProfileAvatar from "@/components/ProfileAvatar";
@@ -227,50 +227,77 @@ export default function ParentHome() {
           </div>
         ) : (
           <div className="space-y-2">
+            {/* Grupper pending etter completion_date — nyeste først */}
             <AnimatePresence>
-              {pending.map((row) => (
-                <motion.div
-                  key={row.id}
-                  layout
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -100 }}
-                  className="card p-3 flex items-center gap-3"
-                >
-                  {row.profiles && (
-                    <ProfileAvatar
-                      emoji={row.profiles.avatar_emoji}
-                      color={row.profiles.avatar_color}
-                      size="sm"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="font-extrabold text-purple-900 truncate">
-                      {row.tasks?.icon} {row.tasks?.title ?? "?"}
+              {(() => {
+                const groups: Record<string, PendingCompletionRow[]> = {};
+                for (const row of pending) {
+                  const d = row.completion_date;
+                  if (!groups[d]) groups[d] = [];
+                  groups[d].push(row);
+                }
+                const sortedDates = Object.keys(groups).sort((a, b) =>
+                  b.localeCompare(a)
+                );
+                return sortedDates.map((date) => (
+                  <div key={date} className="space-y-2">
+                    <div className="flex items-center gap-2 px-1 pt-2">
+                      <h3 className="text-xs font-extrabold text-purple-500 uppercase tracking-wider">
+                        {dateLabel(date, today)}
+                      </h3>
+                      <div className="flex-1 h-px bg-purple-100" />
+                      <span className="text-xs text-purple-400 font-medium">
+                        {groups[date].length}
+                      </span>
                     </div>
-                    <div className="text-xs text-purple-500 font-medium">
-                      {row.profiles?.name} · {formatKr(row.reward_ore)} ·{" "}
-                      {row.tasks ? xpForTask(row.tasks) : 10} XP
-                    </div>
+                    {groups[date].map((row) => (
+                      <motion.div
+                        key={row.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -100 }}
+                        className={`card p-3 flex items-center gap-3 ${
+                          date !== today ? "bg-amber-50/50" : ""
+                        }`}
+                      >
+                        {row.profiles && (
+                          <ProfileAvatar
+                            emoji={row.profiles.avatar_emoji}
+                            color={row.profiles.avatar_color}
+                            size="sm"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-extrabold text-purple-900 truncate">
+                            {row.tasks?.icon} {row.tasks?.title ?? "?"}
+                          </div>
+                          <div className="text-xs text-purple-500 font-medium">
+                            {row.profiles?.name} · {formatKr(row.reward_ore)} ·{" "}
+                            {row.tasks ? xpForTask(row.tasks) : 10} XP
+                          </div>
+                        </div>
+                        <button
+                          disabled={busy === row.id}
+                          onClick={() => reviewTask(row, false)}
+                          className="w-10 h-10 rounded-full bg-red-100 text-red-600 text-xl font-bold active:scale-95"
+                          aria-label="Avvis"
+                        >
+                          ✕
+                        </button>
+                        <button
+                          disabled={busy === row.id}
+                          onClick={() => reviewTask(row, true)}
+                          className="w-10 h-10 rounded-full bg-green-500 text-white text-xl font-bold shadow-md active:scale-95"
+                          aria-label="Godkjenn"
+                        >
+                          ✓
+                        </button>
+                      </motion.div>
+                    ))}
                   </div>
-                  <button
-                    disabled={busy === row.id}
-                    onClick={() => reviewTask(row, false)}
-                    className="w-10 h-10 rounded-full bg-red-100 text-red-600 text-xl font-bold active:scale-95"
-                    aria-label="Avvis"
-                  >
-                    ✕
-                  </button>
-                  <button
-                    disabled={busy === row.id}
-                    onClick={() => reviewTask(row, true)}
-                    className="w-10 h-10 rounded-full bg-green-500 text-white text-xl font-bold shadow-md active:scale-95"
-                    aria-label="Godkjenn"
-                  >
-                    ✓
-                  </button>
-                </motion.div>
-              ))}
+                ));
+              })()}
               {pendingBonus.map((row) => (
                 <motion.div
                   key={row.id}

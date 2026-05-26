@@ -48,3 +48,21 @@ export function greeting(): string {
   if (h < 17) return "Hei";
   return "God kveld";
 }
+
+/** Relativ datolabel: "I dag", "I går", "For 3 dager siden", eller full dato. */
+export function dateLabel(dateIso: string, today = todayIso()): string {
+  if (dateIso === today) return "I dag";
+  const t = new Date(today + "T00:00:00").getTime();
+  const d = new Date(dateIso + "T00:00:00").getTime();
+  const diff = Math.round((t - d) / 86400000);
+  if (diff === 1) return "I går";
+  if (diff > 1 && diff < 7) return `For ${diff} dager siden`;
+  if (diff >= 7 && diff < 14) return "Forrige uke";
+  if (diff >= 14 && diff < 30) return "Tidligere denne måneden";
+  // Fallback: norsk dato
+  const d2 = new Date(dateIso + "T00:00:00");
+  return d2.toLocaleDateString("nb-NO", {
+    day: "numeric",
+    month: "long",
+  });
+}

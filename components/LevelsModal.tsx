@@ -90,7 +90,7 @@ export default function LevelsModal({
         <div className="mt-4 bg-amber-50 rounded-2xl p-3 text-sm text-amber-900 font-semibold flex items-start gap-2">
           <span className="text-xl">🔥</span>
           <span>
-            Tips: Klarer du Level 10 tre perioder på rad får du en strekk-bonus!
+            Tips: Klarer du Level 10 tre perioder på rad får du en streak-bonus!
           </span>
         </div>
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import SetupNotice from "@/components/SetupNotice";
 import LegalFooter from "@/components/LegalFooter";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -87,6 +88,14 @@ export default function SignInPage() {
             {loading ? "Logger inn..." : "Logg inn"}
           </button>
         </form>
+
+        <div className="my-4 flex items-center gap-3">
+          <div className="flex-1 h-px bg-purple-100" />
+          <span className="text-xs font-bold text-purple-400 uppercase">eller</span>
+          <div className="flex-1 h-px bg-purple-100" />
+        </div>
+
+        <GoogleSignInButton label="Logg inn med Google" />
 
         <div className="text-center mt-4 space-y-2">
           <Link href="/auth/forgot" className="text-sm text-purple-600 font-semibold hover:underline block">

@@ -114,7 +114,7 @@ export default function OppgraderPage() {
             <li>✓ <strong>Ubegrenset</strong> barn og oppgaver</li>
             <li>✓ Alle oppgavetyper (intervall, dager etc.)</li>
             <li>✓ Custody-perioder</li>
-            <li>✓ Strekk-bonus</li>
+            <li>✓ Streak-bonus</li>
             <li>✓ Co-parent invite</li>
             <li>✓ Full statistikk og historikk</li>
             <li>✓ 14 dagers gratis prøveperiode uten kort</li>
