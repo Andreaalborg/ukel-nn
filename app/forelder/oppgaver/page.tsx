@@ -7,6 +7,8 @@ import { formatKr, kronerToOre } from "@/lib/utils";
 import { describeRecurrence, DAY_NAMES } from "@/lib/scheduling";
 import { ColorPicker, EmojiPicker } from "@/components/EmojiPicker";
 import SetupNotice from "@/components/SetupNotice";
+import { UpgradePrompt, PremiumLockBadge } from "@/components/PremiumGate";
+import { usePremium, FREE_LIMITS } from "@/lib/usePremium";
 import { AnimatePresence, motion } from "framer-motion";
 
 type Draft = {
@@ -43,6 +45,7 @@ const EMPTY: Draft = {
 };
 
 export default function TasksPage() {
+  const { isPremium } = usePremium();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [kids, setKids] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,8 +73,22 @@ export default function TasksPage() {
     reload();
   }, [reload]);
 
+  const canAddTask = isPremium || tasks.length < FREE_LIMITS.maxTasks;
+  const canUseAdvancedRecurrence = isPremium;
+
   const save = async () => {
     if (!editing || !editing.title.trim() || !householdId) return;
+    if (!editing.id && !canAddTask) {
+      alert(`Gratis-grense på ${FREE_LIMITS.maxTasks} oppgaver — oppgrader for flere.`);
+      return;
+    }
+    if (
+      !canUseAdvancedRecurrence &&
+      (editing.recurrence === "days_of_week" || editing.recurrence === "interval")
+    ) {
+      alert("Valgte ukedager og intervall krever Premium.");
+      return;
+    }
     const payload = {
       household_id: householdId,
       title: editing.title.trim(),
@@ -137,13 +154,26 @@ export default function TasksPage() {
         <div>
           <h1 className="text-3xl font-extrabold text-purple-900">Oppgaver</h1>
           <p className="text-purple-600 font-medium text-sm">
-            Gruppert per barn. Klikk for å åpne/lukke.
+            {isPremium
+              ? "Gruppert per barn. Klikk for å åpne/lukke."
+              : `Gratis: ${tasks.length}/${FREE_LIMITS.maxTasks} oppgaver brukt`}
           </p>
         </div>
-        <button onClick={() => setEditing({ ...EMPTY })} className="btn-primary">
+        <button
+          onClick={() => canAddTask && setEditing({ ...EMPTY })}
+          disabled={!canAddTask}
+          className="btn-primary disabled:opacity-50"
+        >
           + Ny
         </button>
       </header>
+
+      {!isPremium && tasks.length >= FREE_LIMITS.maxTasks && (
+        <UpgradePrompt
+          title={`Du har nådd ${FREE_LIMITS.maxTasks} oppgaver-grensen på gratis`}
+          message="Oppgrader for ubegrenset antall oppgaver og avanserte hyppighets-typer."
+        />
+      )}
 
       <div className="space-y-3">
         {groups.map((g) => {

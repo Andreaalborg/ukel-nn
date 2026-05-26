@@ -11,6 +11,8 @@ export type Household = {
   stripe_price_id: string | null;
   current_period_end: string | null;
   lifetime: boolean;
+  comp_until: string | null;
+  comp_note: string | null;
   created_at: string;
   updated_at: string;
 };

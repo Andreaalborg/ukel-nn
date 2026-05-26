@@ -8,6 +8,7 @@ import { periodDays } from "@/lib/periods";
 import { xpForTask, getLevel } from "@/lib/levels";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import SetupNotice from "@/components/SetupNotice";
+import PremiumGate from "@/components/PremiumGate";
 import { AnimatePresence, motion } from "framer-motion";
 
 type Draft = {
@@ -18,7 +19,18 @@ type Draft = {
   label: string;
 };
 
-export default function PeriodsPage() {
+export default function PeriodsPageWrapper() {
+  return (
+    <PremiumGate
+      feature="Custody-perioder krever Premium"
+      description="Definer besøksperioder for samværsforeldre — XP og bonuser regnes per besøk i stedet for kalenderuke. Tilgjengelig i Familie- og Lifetime-pakkene."
+    >
+      <PeriodsPage />
+    </PremiumGate>
+  );
+}
+
+function PeriodsPage() {
   const [kids, setKids] = useState<Profile[]>([]);
   const [periods, setPeriods] = useState<CustodyPeriod[]>([]);
   const [achievements, setAchievements] = useState<PeriodAchievement[]>([]);

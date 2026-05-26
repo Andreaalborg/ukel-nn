@@ -7,6 +7,7 @@ import { formatKr, kronerToOre } from "@/lib/utils";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import SetupNotice from "@/components/SetupNotice";
+import PremiumGate from "@/components/PremiumGate";
 import { AnimatePresence, motion } from "framer-motion";
 
 type Draft = {
@@ -30,7 +31,18 @@ const EMPTY: Draft = {
   active: true,
 };
 
-export default function StreakPage() {
+export default function StreakPageWrapper() {
+  return (
+    <PremiumGate
+      feature="Strekk-bonus krever Premium"
+      description="Belønn barn som når Level 10 flere perioder på rad. Motiverer til langsiktig innsats. Tilgjengelig i Familie- og Lifetime-pakkene."
+    >
+      <StreakPage />
+    </PremiumGate>
+  );
+}
+
+function StreakPage() {
   const [rewards, setRewards] = useState<StreakReward[]>([]);
   const [kids, setKids] = useState<Profile[]>([]);
   const [achievements, setAchievements] = useState<PeriodAchievement[]>([]);

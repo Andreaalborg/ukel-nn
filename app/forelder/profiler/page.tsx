@@ -6,6 +6,8 @@ import type { Profile, Role } from "@/lib/types";
 import { ColorPicker, EmojiPicker } from "@/components/EmojiPicker";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import SetupNotice from "@/components/SetupNotice";
+import { UpgradePrompt } from "@/components/PremiumGate";
+import { usePremium, FREE_LIMITS } from "@/lib/usePremium";
 import { AnimatePresence, motion } from "framer-motion";
 
 type Draft = {
@@ -49,10 +51,43 @@ export default function ProfilesPage() {
     reload();
   }, [reload]);
 
+  if (!isSupabaseConfigured) return <SetupNotice />;
+  if (loading) return <div className="text-center py-12 text-4xl animate-float">👥</div>;
+
+  return <ProfilesContent profiles={profiles} editing={editing} setEditing={setEditing} reload={reload} householdId={householdId} />;
+}
+
+function ProfilesContent({
+  profiles,
+  editing,
+  setEditing,
+  reload,
+  householdId,
+}: {
+  profiles: Profile[];
+  editing: Draft | null;
+  setEditing: (d: Draft | null) => void;
+  reload: () => Promise<void>;
+  householdId: string | null;
+}) {
+  const { isPremium } = usePremium();
+  const kidsCount = profiles.filter((p) => p.role === "child").length;
+  const canAddKid = isPremium || kidsCount < FREE_LIMITS.maxKids;
+
   const save = async () => {
     if (!editing || !editing.name.trim() || !householdId) return;
     if (!/^\d{4,6}$/.test(editing.pin)) {
       alert("PIN må være 4-6 sifre");
+      return;
+    }
+    // Sjekk gating: hvis ny barneprofil og ikke premium, kan vi ikke legge til over grensen
+    if (
+      !editing.id &&
+      editing.role === "child" &&
+      !isPremium &&
+      kidsCount >= FREE_LIMITS.maxKids
+    ) {
+      alert(`Gratis-grense på ${FREE_LIMITS.maxKids} barn — oppgrader for flere.`);
       return;
     }
     const payload = {
@@ -81,9 +116,6 @@ export default function ProfilesPage() {
     reload();
   };
 
-  if (!isSupabaseConfigured) return <SetupNotice />;
-  if (loading) return <div className="text-center py-12 text-4xl animate-float">👥</div>;
-
   return (
     <div className="space-y-4">
       <header className="flex items-center justify-between">
@@ -91,10 +123,24 @@ export default function ProfilesPage() {
           <h1 className="text-3xl font-extrabold text-purple-900">Profiler</h1>
           <p className="text-purple-600 font-medium text-sm">Familiemedlemmer, navn, PIN, avatar</p>
         </div>
-        <button onClick={() => setEditing({ ...EMPTY })} className="btn-primary">
+        <button
+          onClick={() => {
+            if (!canAddKid) return;
+            setEditing({ ...EMPTY });
+          }}
+          disabled={!canAddKid}
+          className="btn-primary disabled:opacity-50"
+        >
           + Ny
         </button>
       </header>
+
+      {!isPremium && kidsCount >= FREE_LIMITS.maxKids && (
+        <UpgradePrompt
+          title={`Du har nådd ${FREE_LIMITS.maxKids} barn-grensen på gratis`}
+          message="Oppgrader for ubegrenset antall barn i familien."
+        />
+      )}
 
       <div className="grid gap-3">
         <AnimatePresence>

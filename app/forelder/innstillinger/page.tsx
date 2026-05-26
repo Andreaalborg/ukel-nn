@@ -8,6 +8,8 @@ import { useSession } from "@/lib/useSession";
 import { logout, clearActiveProfile } from "@/lib/auth";
 import { clearCurrentHouseholdId } from "@/lib/supabase";
 import SetupNotice from "@/components/SetupNotice";
+import { UpgradePrompt, PremiumLockBadge } from "@/components/PremiumGate";
+import { usePremium } from "@/lib/usePremium";
 import type { Household, HouseholdInvite, HouseholdMember } from "@/lib/types";
 
 type MemberRow = HouseholdMember & { user_email?: string };
@@ -15,6 +17,7 @@ type MemberRow = HouseholdMember & { user_email?: string };
 export default function SettingsPage() {
   const router = useRouter();
   const { session } = useSession();
+  const { isPremium } = usePremium();
   const [household, setHousehold] = useState<Household | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [invites, setInvites] = useState<HouseholdInvite[]>([]);
@@ -248,7 +251,19 @@ export default function SettingsPage() {
       </section>
 
       {/* Invitasjoner */}
-      {isOwner && (
+      {isOwner && !isPremium && (
+        <section>
+          <h2 className="text-lg font-extrabold text-purple-900 mb-2 flex items-center gap-2">
+            ✉️ Inviter co-parent <PremiumLockBadge />
+          </h2>
+          <UpgradePrompt
+            title="Co-parent invite er en Premium-funksjon"
+            message="La samværsforelderen logge inn og se samme barn, oppgaver og saldo. Tilgjengelig i Familie- og Lifetime-pakkene."
+          />
+        </section>
+      )}
+
+      {isOwner && isPremium && (
         <section>
           <h2 className="text-lg font-extrabold text-purple-900 mb-2">✉️ Inviter co-parent</h2>
           <div className="card p-4">
