@@ -55,7 +55,6 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Draft | null>(null);
   const [householdId, setHouseholdId] = useState<string | null>(null);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   const reload = useCallback(async () => {
     const hid = await getCurrentHouseholdId();
@@ -161,7 +160,7 @@ export default function TasksPage() {
           <h1 className="text-3xl font-extrabold text-purple-900">Oppgaver</h1>
           <p className="text-purple-600 font-medium text-sm">
             {isPremium
-              ? "Gruppert per barn. Klikk for å åpne/lukke."
+              ? "Ett kort per familiemedlem"
               : `Gratis: ${tasks.length}/${FREE_LIMITS.maxTasks} oppgaver brukt`}
           </p>
         </div>
@@ -181,124 +180,123 @@ export default function TasksPage() {
         />
       )}
 
-      <div className="space-y-3">
-        {groups.map((g) => {
-          const isOpen = openGroups[g.key] ?? true;
-          const active = g.tasks.filter((t) => t.active).length;
-          return (
-            <div key={g.key} className="card overflow-hidden">
-              <button
-                onClick={() => setOpenGroups({ ...openGroups, [g.key]: !isOpen })}
-                className="w-full p-3 flex items-center gap-3 hover:bg-purple-50"
-              >
+      {tasks.length === 0 ? (
+        <div className="card p-6 text-center">
+          <div className="text-4xl mb-1">📝</div>
+          <p className="font-bold text-purple-900">Ingen oppgaver enda</p>
+          <p className="text-sm text-purple-500">Trykk &quot;+ Ny&quot; for å lage den første!</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {groups.map((g) => {
+            const active = g.tasks.filter((t) => t.active).length;
+            return (
+              <div key={g.key} className="card overflow-hidden flex flex-col">
+                {/* Kort-header */}
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                  style={{ background: `${g.color}33` }}
+                  className="flex items-center gap-3 p-4"
+                  style={{ background: `${g.color}14` }}
                 >
-                  {g.emoji}
-                </div>
-                <div className="flex-1 text-left">
-                  <div className="font-extrabold text-purple-900">{g.label}</div>
-                  <div className="text-xs text-purple-500 font-medium">
-                    {g.tasks.length} oppgaver · {active} aktive
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 shadow-sm bg-white"
+                  >
+                    {g.emoji}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-extrabold text-purple-900 text-lg truncate">
+                      {g.label}
+                    </div>
+                    <div className="text-xs text-purple-500 font-semibold">
+                      {g.tasks.length} oppgave{g.tasks.length === 1 ? "" : "r"} · {active} aktive
+                    </div>
                   </div>
                 </div>
-                <div className={`text-purple-400 transition-transform ${isOpen ? "rotate-90" : ""}`}>
-                  →
-                </div>
-              </button>
-              <AnimatePresence>
-                {isOpen && (
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: "auto" }}
-                    exit={{ height: 0 }}
-                    className="border-t border-purple-100"
-                  >
-                    {g.tasks.length === 0 ? (
-                      <div className="p-4 text-center text-purple-400 text-sm">
-                        Ingen oppgaver enda for {g.label.toLowerCase()}.
-                      </div>
-                    ) : (
-                      <div className="divide-y divide-purple-50">
-                        {g.tasks.map((t) => (
+
+                {/* Oppgaveliste */}
+                {g.tasks.length === 0 ? (
+                  <div className="p-5 text-center text-purple-400 text-sm flex-1">
+                    Ingen oppgaver enda for {g.label.toLowerCase()}.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-purple-50 flex-1">
+                    <AnimatePresence initial={false}>
+                      {g.tasks.map((t) => (
+                        <motion.div
+                          key={t.id}
+                          layout
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className={`p-3 flex items-center gap-3 ${!t.active && "opacity-50"}`}
+                        >
                           <div
-                            key={t.id}
-                            className={`p-3 flex items-center gap-3 ${!t.active && "opacity-50"}`}
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                            style={{ background: `${t.color}33` }}
                           >
-                            <div
-                              className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                              style={{ background: `${t.color}33` }}
-                            >
-                              {t.icon}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-extrabold text-purple-900 truncate">
-                                {t.title}
-                              </div>
-                              <div className="text-xs text-purple-500">
-                                {formatKr(t.reward_ore)} · {t.xp_value} XP ·{" "}
-                                {describeRecurrence(t)}
-                                {t.due_time &&
-                                  ` · 🕐 ${t.due_time.slice(0, 5)} (${t.duration_minutes ?? 15} min)`}
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => toggleActive(t)}
-                              className={`text-[10px] font-bold px-2 py-1 rounded-full ${
-                                t.active
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {t.active ? "PÅ" : "AV"}
-                            </button>
-                            <button
-                              onClick={() =>
-                                setEditing({
-                                  id: t.id,
-                                  title: t.title,
-                                  description: t.description ?? "",
-                                  reward_kr: t.reward_ore / 100,
-                                  xp_value: t.xp_value ?? 10,
-                                  icon: t.icon,
-                                  color: t.color,
-                                  recurrence: t.recurrence,
-                                  days_of_week: t.days_of_week ?? [1, 2, 3, 4, 5],
-                                  interval_days: t.interval_days ?? 2,
-                                  start_date: t.start_date ?? "",
-                                  end_date: t.end_date ?? "",
-                                  due_time: t.due_time?.slice(0, 5) ?? "",
-                                  duration_minutes: t.duration_minutes ?? 15,
-                                  assigned_to: t.assigned_to,
-                                  active: t.active,
-                                })
-                              }
-                              className="text-purple-500 px-1"
-                            >
-                              ✏️
-                            </button>
-                            <button onClick={() => del(t.id)} className="text-red-400 px-1">
-                              🗑️
-                            </button>
+                            {t.icon}
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </motion.div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-extrabold text-purple-900 truncate">
+                              {t.title}
+                            </div>
+                            <div className="text-xs text-purple-500">
+                              {formatKr(t.reward_ore)} · {t.xp_value} XP ·{" "}
+                              {describeRecurrence(t)}
+                              {t.due_time &&
+                                ` · 🕐 ${t.due_time.slice(0, 5)} (${t.duration_minutes ?? 15} min)`}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => toggleActive(t)}
+                            className={`text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0 ${
+                              t.active
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-100 text-gray-500"
+                            }`}
+                          >
+                            {t.active ? "PÅ" : "AV"}
+                          </button>
+                          <button
+                            onClick={() =>
+                              setEditing({
+                                id: t.id,
+                                title: t.title,
+                                description: t.description ?? "",
+                                reward_kr: t.reward_ore / 100,
+                                xp_value: t.xp_value ?? 10,
+                                icon: t.icon,
+                                color: t.color,
+                                recurrence: t.recurrence,
+                                days_of_week: t.days_of_week ?? [1, 2, 3, 4, 5],
+                                interval_days: t.interval_days ?? 2,
+                                start_date: t.start_date ?? "",
+                                end_date: t.end_date ?? "",
+                                due_time: t.due_time?.slice(0, 5) ?? "",
+                                duration_minutes: t.duration_minutes ?? 15,
+                                assigned_to: t.assigned_to,
+                                active: t.active,
+                              })
+                            }
+                            className="text-purple-500 px-1 flex-shrink-0"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => del(t.id)}
+                            className="text-red-400 px-1 flex-shrink-0"
+                          >
+                            🗑️
+                          </button>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
                 )}
-              </AnimatePresence>
-            </div>
-          );
-        })}
-        {tasks.length === 0 && (
-          <div className="card p-6 text-center">
-            <div className="text-4xl mb-1">📝</div>
-            <p className="font-bold text-purple-900">Ingen oppgaver enda</p>
-            <p className="text-sm text-purple-500">Trykk "+ Ny" for å lage den første!</p>
-          </div>
-        )}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {editing && (
         <TaskEditor
