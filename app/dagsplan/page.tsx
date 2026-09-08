@@ -16,11 +16,14 @@ import { motion } from "framer-motion";
 
 const START_HOUR = 6;
 const END_HOUR = 21;
-const PX_PER_HOUR = 56;
-const TIMELINE_HEIGHT = (END_HOUR - START_HOUR) * PX_PER_HOUR;
-const ANYTIME_MIN_HEIGHT = 72;
-const COLUMN_WIDTH = 208;
-const GUTTER_WIDTH = 52;
+const PX_PER_HOUR = 90;
+const TIMELINE_WIDTH = (END_HOUR - START_HOUR) * PX_PER_HOUR;
+const GUTTER_WIDTH = 136;
+const ANYTIME_WIDTH = 104;
+const ROW_MIN_HEIGHT = 68;
+const HEADER_HEIGHT = 40;
+const CHIP_HEIGHT = 32;
+const CHIP_WIDTH = 98;
 const BUCKET_MIN = 30; // grupperer oppgaver i 30-min-bøtter for å unngå kollisjon
 
 type TaskWithState = Task & {
@@ -123,13 +126,7 @@ export default function DagsplanPage() {
     setBusy(null);
   };
 
-  const timeToY = (time: string): number => {
-    const [h, m] = time.split(":").map(Number);
-    const hours = Math.min(END_HOUR, Math.max(START_HOUR, h + m / 60));
-    return (hours - START_HOUR) * PX_PER_HOUR;
-  };
-
-  const nowY =
+  const nowX =
     now.getHours() >= START_HOUR && now.getHours() < END_HOUR
       ? (now.getHours() + now.getMinutes() / 60 - START_HOUR) * PX_PER_HOUR
       : null;
@@ -174,8 +171,8 @@ export default function DagsplanPage() {
   return (
     <div className="min-h-screen pb-10">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-purple-100 px-4 py-3">
-        <div className="flex items-center justify-between max-w-5xl mx-auto">
+      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-purple-100 px-4 py-3">
+        <div className="flex items-center justify-between max-w-6xl mx-auto">
           <Link
             href={backHref}
             className="text-purple-600 font-semibold text-sm hover:text-purple-800"
@@ -203,89 +200,160 @@ export default function DagsplanPage() {
           Ingen barn registrert enda.
         </div>
       ) : (
-        <div className="px-2 pt-3 max-w-5xl mx-auto">
-          <p className="text-center text-xs text-purple-400 mb-2">
+        <div className="max-w-6xl mx-auto pt-3">
+          <p className="text-center text-xs text-purple-400 mb-2 px-4">
             Trykk på en oppgave for å krysse den av — en voksen godkjenner etterpå
           </p>
-          <div className="overflow-x-auto no-scrollbar">
-            <div className="inline-flex" style={{ minWidth: "100%" }}>
-              {/* Gutter med klokkeslett */}
+
+          <div className="overflow-x-auto no-scrollbar border border-purple-100 rounded-2xl mx-2 sm:mx-4 bg-white">
+            <div style={{ minWidth: GUTTER_WIDTH + ANYTIME_WIDTH + TIMELINE_WIDTH }}>
+              {/* Header-rad: klokkeslett */}
               <div
-                className="sticky left-0 z-20 bg-white/95 backdrop-blur flex-shrink-0"
-                style={{ width: GUTTER_WIDTH }}
+                className="flex bg-white border-b-2 border-purple-200"
+                style={{ height: HEADER_HEIGHT }}
               >
-                <div style={{ height: ANYTIME_MIN_HEIGHT }} className="flex items-end pb-1">
-                  <span className="text-[9px] font-bold text-purple-400 uppercase">
+                <div
+                  className="sticky left-0 z-30 bg-white flex items-center justify-center border-r border-purple-100 flex-shrink-0"
+                  style={{ width: GUTTER_WIDTH }}
+                >
+                  <span className="text-[10px] font-extrabold text-purple-400 uppercase">
+                    Familie
+                  </span>
+                </div>
+                <div
+                  className="sticky z-30 bg-white flex items-center justify-center border-r-2 border-purple-200 flex-shrink-0"
+                  style={{ width: ANYTIME_WIDTH, left: GUTTER_WIDTH }}
+                >
+                  <span className="text-[10px] font-extrabold text-purple-400 uppercase text-center leading-tight">
                     Når som
                     <br />
                     helst
                   </span>
                 </div>
-                <div className="relative" style={{ height: TIMELINE_HEIGHT }}>
+                <div className="relative flex-shrink-0" style={{ width: TIMELINE_WIDTH }}>
                   {hours.map((h) => (
                     <div
                       key={h}
-                      className="absolute -translate-y-1/2 text-[10px] font-bold text-purple-400 pr-1 text-right w-full"
-                      style={{ top: (h - START_HOUR) * PX_PER_HOUR }}
+                      className="absolute top-0 bottom-0 flex items-center border-l border-purple-100"
+                      style={{ left: (h - START_HOUR) * PX_PER_HOUR }}
                     >
-                      {String(h).padStart(2, "0")}:00
+                      <span className="text-[10px] font-bold text-purple-500 pl-1">
+                        {String(h).padStart(2, "0")}:00
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Kolonner per barn */}
-              <div className="flex gap-3 pl-2 pr-3">
-                {kids.map((kid) => {
-                  const kidTasks = tasksForKid(kid);
-                  const anytimeTasks = kidTasks.filter((t) => !t.due_time);
-                  const timedTasks = kidTasks.filter((t) => t.due_time);
+              {/* Rader per familiemedlem */}
+              {kids.map((kid, kidIdx) => {
+                const kidTasks = tasksForKid(kid);
+                const anytimeTasks = kidTasks.filter((t) => !t.due_time);
+                const timedTasks = kidTasks.filter((t) => t.due_time);
 
-                  // Grupper timede oppgaver i 30-min-bøtter for å unngå kollisjon
-                  const buckets = new Map<number, TaskWithState[]>();
-                  for (const t of timedTasks) {
-                    const [h, m] = t.due_time!.split(":").map(Number);
-                    const totalMin = h * 60 + m;
-                    const bucketKey =
-                      Math.round(totalMin / BUCKET_MIN) * BUCKET_MIN;
-                    if (!buckets.has(bucketKey)) buckets.set(bucketKey, []);
-                    buckets.get(bucketKey)!.push(t);
-                  }
+                // Grupper timede oppgaver i 30-min-bøtter, stables vertikalt ved kollisjon
+                const buckets = new Map<number, TaskWithState[]>();
+                for (const t of timedTasks) {
+                  const [h, m] = t.due_time!.split(":").map(Number);
+                  const totalMin = h * 60 + m;
+                  const bucketKey = Math.round(totalMin / BUCKET_MIN) * BUCKET_MIN;
+                  if (!buckets.has(bucketKey)) buckets.set(bucketKey, []);
+                  buckets.get(bucketKey)!.push(t);
+                }
+                const maxStack = Math.max(1, ...[...buckets.values()].map((b) => b.length));
+                const rowHeight = Math.max(
+                  ROW_MIN_HEIGHT,
+                  maxStack * (CHIP_HEIGHT + 4) + 12
+                );
 
-                  return (
+                return (
+                  <div
+                    key={kid.id}
+                    className={`flex ${kidIdx > 0 ? "border-t border-purple-100" : ""}`}
+                    style={{ minHeight: rowHeight }}
+                  >
+                    {/* Gutter: avatar + navn */}
                     <div
-                      key={kid.id}
-                      className="flex-shrink-0"
-                      style={{ width: COLUMN_WIDTH }}
+                      className="sticky left-0 z-20 bg-white flex items-center gap-2 px-2 border-r border-purple-100 flex-shrink-0"
+                      style={{ width: GUTTER_WIDTH }}
                     >
-                      {/* Kid header */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <ProfileAvatar
-                          emoji={kid.avatar_emoji}
-                          color={kid.avatar_color}
-                          size="sm"
-                        />
-                        <div className="min-w-0">
-                          <div className="font-extrabold text-purple-900 text-sm truncate">
-                            {kid.name}
-                          </div>
-                          <div className="text-[10px] text-purple-500 font-medium">
-                            {formatKr(kid.balance_ore)}
-                          </div>
+                      <ProfileAvatar emoji={kid.avatar_emoji} color={kid.avatar_color} size="sm" />
+                      <div className="min-w-0">
+                        <div className="font-extrabold text-purple-900 text-xs truncate">
+                          {kid.name}
+                        </div>
+                        <div className="text-[10px] text-purple-500 font-medium">
+                          {formatKr(kid.balance_ore)}
                         </div>
                       </div>
+                    </div>
 
-                      {/* Når som helst */}
-                      <div
-                        className="flex flex-wrap gap-1 content-start"
-                        style={{ minHeight: ANYTIME_MIN_HEIGHT }}
-                      >
-                        {anytimeTasks.length === 0 ? (
-                          <div className="text-[10px] text-purple-300 italic px-1">
-                            Ingen
-                          </div>
-                        ) : (
-                          anytimeTasks.map((t) => (
+                    {/* Når som helst-celle */}
+                    <div
+                      className="sticky z-20 bg-white flex flex-col gap-1 justify-center items-center p-1.5 border-r-2 border-purple-200 flex-shrink-0"
+                      style={{ width: ANYTIME_WIDTH, left: GUTTER_WIDTH }}
+                    >
+                      {anytimeTasks.length === 0 ? (
+                        <span className="text-[9px] text-purple-300 italic">—</span>
+                      ) : (
+                        anytimeTasks.map((t) => (
+                          <TaskChip
+                            key={t.id}
+                            task={t}
+                            fullWidth
+                            busy={busy === `${t.id}-${kid.id}` || busy === t.completion?.id}
+                            onTap={() => {
+                              if (t.state === "available") claimTask(t, kid);
+                              else if (t.state === "pending" && t.completion)
+                                unclaimTask(t.completion.id);
+                            }}
+                          />
+                        ))
+                      )}
+                    </div>
+
+                    {/* Tidsrutenett */}
+                    <div
+                      className="relative flex-shrink-0"
+                      style={{ width: TIMELINE_WIDTH, minHeight: rowHeight }}
+                    >
+                      {/* Rutenett-linjer: hel time (solid) + halvtime (lys) */}
+                      {hours.map((h) => (
+                        <div
+                          key={`h-${h}`}
+                          className="absolute top-0 bottom-0 border-l border-purple-100"
+                          style={{ left: (h - START_HOUR) * PX_PER_HOUR }}
+                        />
+                      ))}
+                      {hours.slice(0, -1).map((h) => (
+                        <div
+                          key={`hm-${h}`}
+                          className="absolute top-0 bottom-0 border-l border-dashed border-purple-50"
+                          style={{ left: (h - START_HOUR) * PX_PER_HOUR + PX_PER_HOUR / 2 }}
+                        />
+                      ))}
+
+                      {/* Nå-strek */}
+                      {nowX !== null && (
+                        <div
+                          className="absolute top-0 bottom-0 w-0.5 bg-red-400 z-10"
+                          style={{ left: nowX }}
+                        >
+                          <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-red-400" />
+                        </div>
+                      )}
+
+                      {/* Oppgave-blokker */}
+                      {[...buckets.entries()].map(([bucketMin, bucketTasks]) => (
+                        <div
+                          key={bucketMin}
+                          className="absolute flex flex-col gap-1 top-1.5"
+                          style={{
+                            left: (bucketMin / 60 - START_HOUR) * PX_PER_HOUR + 3,
+                            width: CHIP_WIDTH,
+                          }}
+                        >
+                          {bucketTasks.map((t) => (
                             <TaskChip
                               key={t.id}
                               task={t}
@@ -296,62 +364,13 @@ export default function DagsplanPage() {
                                   unclaimTask(t.completion.id);
                               }}
                             />
-                          ))
-                        )}
-                      </div>
-
-                      {/* Tidslinje */}
-                      <div
-                        className="relative border-t border-purple-100 mt-1"
-                        style={{ height: TIMELINE_HEIGHT }}
-                      >
-                        {hours.map((h) => (
-                          <div
-                            key={h}
-                            className="absolute left-0 right-0 border-t border-purple-50"
-                            style={{ top: (h - START_HOUR) * PX_PER_HOUR }}
-                          />
-                        ))}
-                        {nowY !== null && (
-                          <div
-                            className="absolute left-0 right-0 h-0.5 bg-red-400 z-10"
-                            style={{ top: nowY }}
-                          >
-                            <div className="absolute -left-1 -top-1 w-2 h-2 rounded-full bg-red-400" />
-                          </div>
-                        )}
-                        {[...buckets.entries()].map(([bucketMin, bucketTasks]) => (
-                          <div
-                            key={bucketMin}
-                            className="absolute left-0.5 right-0.5 space-y-0.5"
-                            style={{
-                              top:
-                                ((bucketMin / 60) - START_HOUR) * PX_PER_HOUR,
-                            }}
-                          >
-                            {bucketTasks.map((t) => (
-                              <TaskChip
-                                key={t.id}
-                                task={t}
-                                compact
-                                busy={
-                                  busy === `${t.id}-${kid.id}` ||
-                                  busy === t.completion?.id
-                                }
-                                onTap={() => {
-                                  if (t.state === "available") claimTask(t, kid);
-                                  else if (t.state === "pending" && t.completion)
-                                    unclaimTask(t.completion.id);
-                                }}
-                              />
-                            ))}
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -364,12 +383,12 @@ function TaskChip({
   task,
   onTap,
   busy,
-  compact,
+  fullWidth,
 }: {
   task: TaskWithState;
   onTap: () => void;
   busy: boolean;
-  compact?: boolean;
+  fullWidth?: boolean;
 }) {
   const clickable = task.state === "available" || task.state === "pending";
   const stateStyles: Record<string, string> = {
@@ -385,20 +404,24 @@ function TaskChip({
       animate={{ opacity: 1, scale: 1 }}
       disabled={busy || !clickable}
       onClick={onTap}
-      className={`w-full flex items-center gap-1 rounded-lg px-1.5 text-left ${
-        compact ? "py-1" : "py-1.5"
-      } ${stateStyles[task.state] ?? "bg-white"} ${
-        !clickable ? "cursor-default" : ""
-      }`}
-      style={{ borderLeft: `3px solid ${task.color}` }}
-      title={task.title}
+      className={`flex flex-col items-start justify-center rounded-lg px-1.5 py-1 text-left overflow-hidden ${
+        fullWidth ? "w-full" : ""
+      } ${stateStyles[task.state] ?? "bg-white"} ${!clickable ? "cursor-default" : ""}`}
+      style={{
+        borderLeft: `3px solid ${task.color}`,
+        height: CHIP_HEIGHT,
+        width: fullWidth ? undefined : CHIP_WIDTH,
+      }}
+      title={`${task.title}${task.due_time ? " · " + task.due_time.slice(0, 5) : ""}`}
     >
-      <span className="text-sm flex-shrink-0">{task.icon}</span>
-      <span className="text-[10px] font-bold text-purple-900 truncate flex-1">
-        {task.title}
-      </span>
-      {task.state === "pending" && <span className="text-[9px]">⏳</span>}
-      {task.state === "approved" && <span className="text-[9px]">✅</span>}
+      <div className="flex items-center gap-1 w-full">
+        <span className="text-xs flex-shrink-0">{task.icon}</span>
+        <span className="text-[9px] font-bold text-purple-900 truncate flex-1">
+          {task.title}
+        </span>
+        {task.state === "pending" && <span className="text-[8px] flex-shrink-0">⏳</span>}
+        {task.state === "approved" && <span className="text-[8px] flex-shrink-0">✅</span>}
+      </div>
     </motion.button>
   );
 }
