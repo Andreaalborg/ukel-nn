@@ -12,6 +12,7 @@ import { getTaskState } from "@/lib/scheduling";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import SetupNotice from "@/components/SetupNotice";
 import { celebrate } from "@/components/Celebrate";
+import AppShell from "@/components/AppShell";
 import { AnimatePresence, motion } from "framer-motion";
 
 const START_HOUR = 6;
@@ -189,10 +190,11 @@ export default function DagsplanPage() {
     setViewedDate((d) => addDaysIso(d, view === "day" ? 1 : 7));
   const goToday = () => setViewedDate(realToday);
 
+  const activeProfile = getActiveProfile();
+  const isParent = activeProfile?.role === "parent";
   const backHref = (() => {
-    const active = getActiveProfile();
-    if (active?.role === "parent") return "/forelder";
-    if (active?.role === "child" && active.id) return `/barn?p=${active.id}`;
+    if (activeProfile?.role === "parent") return "/forelder";
+    if (activeProfile?.role === "child" && activeProfile.id) return `/barn?p=${activeProfile.id}`;
     return "/";
   })();
 
@@ -241,10 +243,16 @@ export default function DagsplanPage() {
             : `${fmtDay(start)}. ${fmtMonth(start)} – ${fmtDay(end)}. ${fmtMonth(end)}`;
         })();
 
-  return (
-    <div className="min-h-screen pb-12">
+  const pageContent = (
+    <>
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-purple-100 px-4 py-3 shadow-sm">
+      <div
+        className={`z-40 bg-white/95 backdrop-blur border-b border-purple-100 px-4 py-3 shadow-sm ${
+          isParent
+            ? "sm:sticky sm:top-0 -mx-4 sm:-mx-8 mb-4 sm:mb-0"
+            : "sticky top-0"
+        }`}
+      >
         <div className="flex items-center justify-between max-w-6xl mx-auto mb-2">
           <Link
             href={backHref}
@@ -395,8 +403,13 @@ export default function DagsplanPage() {
           </AnimatePresence>
         </div>
       )}
-    </div>
+    </>
   );
+
+  if (isParent) {
+    return <AppShell wide>{pageContent}</AppShell>;
+  }
+  return <div className="min-h-screen pb-12">{pageContent}</div>;
 }
 
 /* ------------------------------------------------------------------ */
