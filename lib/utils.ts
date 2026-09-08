@@ -34,12 +34,21 @@ export function startOfMonth(date = new Date()): Date {
   return d;
 }
 
-export function todayIso(): string {
-  const d = new Date();
+export function dateToIso(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+export function todayIso(): string {
+  return dateToIso(new Date());
+}
+
+export function addDaysIso(dateIso: string, days: number): string {
+  const d = new Date(dateIso + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return dateToIso(d);
 }
 
 export function greeting(): string {

@@ -25,6 +25,7 @@ type Draft = {
   start_date: string;
   end_date: string;
   due_time: string;
+  duration_minutes: number;
   assigned_to: string | null;
   active: boolean;
 };
@@ -42,6 +43,7 @@ const EMPTY: Draft = {
   start_date: "",
   end_date: "",
   due_time: "",
+  duration_minutes: 15,
   assigned_to: null,
   active: true,
 };
@@ -105,6 +107,7 @@ export default function TasksPage() {
       start_date: editing.start_date || null,
       end_date: editing.end_date || null,
       due_time: editing.due_time || null,
+      duration_minutes: Math.max(5, editing.duration_minutes || 15),
       assigned_to: editing.assigned_to,
       active: editing.active,
     };
@@ -236,7 +239,8 @@ export default function TasksPage() {
                               <div className="text-xs text-purple-500">
                                 {formatKr(t.reward_ore)} · {t.xp_value} XP ·{" "}
                                 {describeRecurrence(t)}
-                                {t.due_time && ` · 🕐 ${t.due_time.slice(0, 5)}`}
+                                {t.due_time &&
+                                  ` · 🕐 ${t.due_time.slice(0, 5)} (${t.duration_minutes ?? 15} min)`}
                               </div>
                             </div>
                             <button
@@ -265,6 +269,7 @@ export default function TasksPage() {
                                   start_date: t.start_date ?? "",
                                   end_date: t.end_date ?? "",
                                   due_time: t.due_time?.slice(0, 5) ?? "",
+                                  duration_minutes: t.duration_minutes ?? 15,
                                   assigned_to: t.assigned_to,
                                   active: t.active,
                                 })
@@ -514,26 +519,40 @@ function TaskEditor({
         <label className="block text-sm font-bold text-purple-700 mb-1">
           📅 Klokkeslett (valgfritt)
         </label>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-1">
           <input
             type="time"
             value={draft.due_time}
             onChange={(e) => onChange({ ...draft, due_time: e.target.value })}
             className="px-3 py-2 rounded-xl border-2 border-purple-200 focus:border-purple-500 outline-none"
           />
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              min={5}
+              max={480}
+              step={5}
+              value={draft.duration_minutes}
+              onChange={(e) =>
+                onChange({ ...draft, duration_minutes: Number(e.target.value) })
+              }
+              className="w-16 px-2 py-2 rounded-xl border-2 border-purple-200 focus:border-purple-500 outline-none text-center"
+            />
+            <span className="text-xs text-purple-500 font-semibold">min</span>
+          </div>
           {draft.due_time && (
             <button
               type="button"
               onClick={() => onChange({ ...draft, due_time: "" })}
               className="text-xs text-purple-400 underline"
             >
-              Fjern
+              Fjern tid
             </button>
           )}
-          <span className="text-xs text-purple-400">
-            Brukes i familiekalenderen (Dagsplan)
-          </span>
         </div>
+        <p className="text-xs text-purple-400 mb-3">
+          Brukes i familiekalenderen (Dagsplan). Varighet er 15 min som standard.
+        </p>
 
         <label className="block text-sm font-bold text-purple-700 mb-1">For hvem?</label>
         <select

@@ -71,6 +71,7 @@ export type Task = {
   start_date: string | null;
   end_date: string | null;
   due_time: string | null;
+  duration_minutes: number;
   xp_value: number;
   assigned_to: string | null;
   active: boolean;
