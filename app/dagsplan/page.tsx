@@ -16,8 +16,6 @@ import { AnimatePresence, motion } from "framer-motion";
 
 const START_HOUR = 6;
 const END_HOUR = 21;
-const PX_PER_HOUR = 120;
-const TIMELINE_WIDTH = (END_HOUR - START_HOUR) * PX_PER_HOUR;
 const GUTTER_WIDTH = 160;
 const ANYTIME_WIDTH = 128;
 const HEADER_HEIGHT = 44;
@@ -28,6 +26,38 @@ const ROW_PADDING = 18;
 const ROW_MIN_HEIGHT = 104;
 
 const DAY_SHORT = ["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"];
+
+// Zoom-nivåer for dagvisningen: fra kompakt (kun hele timer) til
+// detaljert (kvarter med klokkeslett-labels).
+const ZOOM_STEPS = [
+  { pxPerHour: 80, tick: 60, showMinorLabels: false, label: "Kompakt" },
+  { pxPerHour: 120, tick: 30, showMinorLabels: false, label: "Standard" },
+  { pxPerHour: 170, tick: 15, showMinorLabels: false, label: "Kvarter" },
+  { pxPerHour: 230, tick: 15, showMinorLabels: true, label: "Detaljert" },
+  { pxPerHour: 300, tick: 15, showMinorLabels: true, label: "Maks" },
+] as const;
+const DEFAULT_ZOOM_INDEX = 1;
+
+type Tick = { min: number; kind: "hour" | "half" | "quarter"; label?: string };
+
+function buildTicks(tickMinutes: number, showMinorLabels: boolean): Tick[] {
+  const startMin = START_HOUR * 60;
+  const endMin = END_HOUR * 60;
+  const ticks: Tick[] = [];
+  for (let m = startMin; m <= endMin; m += tickMinutes) {
+    const isHour = m % 60 === 0;
+    const isHalf = !isHour && m % 30 === 0;
+    const kind: Tick["kind"] = isHour ? "hour" : isHalf ? "half" : "quarter";
+    let label: string | undefined;
+    if (isHour || showMinorLabels) {
+      const h = Math.floor(m / 60);
+      const mm = m % 60;
+      label = `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+    }
+    ticks.push({ min: m, kind, label });
+  }
+  return ticks;
+}
 
 type TaskWithState = Task & {
   state: "available" | "pending" | "approved" | "rejected" | "locked";
@@ -47,6 +77,7 @@ export default function DagsplanPage() {
   const [now, setNow] = useState(new Date());
   const [view, setView] = useState<ViewMode>("day");
   const [viewedDate, setViewedDate] = useState(todayIso());
+  const [zoomIndex, setZoomIndex] = useState(DEFAULT_ZOOM_INDEX);
 
   const realToday = todayIso();
 
@@ -141,15 +172,16 @@ export default function DagsplanPage() {
     });
   }, [viewedDate]);
 
+  const { pxPerHour, tick, showMinorLabels } = ZOOM_STEPS[zoomIndex];
+  const timelineWidth = (END_HOUR - START_HOUR) * pxPerHour;
+
   const nowX =
     now.getHours() >= START_HOUR && now.getHours() < END_HOUR
-      ? (now.getHours() + now.getMinutes() / 60 - START_HOUR) * PX_PER_HOUR
+      ? (now.getHours() + now.getMinutes() / 60 - START_HOUR) * pxPerHour
       : null;
 
-  const hours = Array.from(
-    { length: END_HOUR - START_HOUR + 1 },
-    (_, i) => START_HOUR + i
-  );
+  const zoomOut = () => setZoomIndex((i) => Math.max(0, i - 1));
+  const zoomIn = () => setZoomIndex((i) => Math.min(ZOOM_STEPS.length - 1, i + 1));
 
   const goPrev = () =>
     setViewedDate((d) => addDaysIso(d, view === "day" ? -1 : -7));
@@ -256,24 +288,53 @@ export default function DagsplanPage() {
             )}
           </div>
 
-          {/* Visningsvalg */}
-          <div className="bg-purple-50 rounded-full p-1 inline-flex">
-            <button
-              onClick={() => setView("day")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition ${
-                view === "day" ? "bg-white text-purple-900 shadow-sm" : "text-purple-500"
-              }`}
-            >
-              Dag
-            </button>
-            <button
-              onClick={() => setView("week")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition ${
-                view === "week" ? "bg-white text-purple-900 shadow-sm" : "text-purple-500"
-              }`}
-            >
-              Uke
-            </button>
+          <div className="flex items-center gap-2">
+            {/* Zoom — kun relevant i dagvisning */}
+            {view === "day" && (
+              <div className="flex items-center gap-1 bg-purple-50 rounded-full p-1">
+                <button
+                  onClick={zoomOut}
+                  disabled={zoomIndex === 0}
+                  className="w-7 h-7 rounded-full bg-white hover:bg-purple-100 disabled:opacity-30 disabled:hover:bg-white text-purple-700 font-bold flex items-center justify-center text-sm"
+                  aria-label="Zoom ut"
+                  title="Zoom ut"
+                >
+                  −
+                </button>
+                <span className="text-[10px] font-bold text-purple-500 w-14 text-center select-none">
+                  {ZOOM_STEPS[zoomIndex].label}
+                </span>
+                <button
+                  onClick={zoomIn}
+                  disabled={zoomIndex === ZOOM_STEPS.length - 1}
+                  className="w-7 h-7 rounded-full bg-white hover:bg-purple-100 disabled:opacity-30 disabled:hover:bg-white text-purple-700 font-bold flex items-center justify-center text-sm"
+                  aria-label="Zoom inn"
+                  title="Zoom inn"
+                >
+                  +
+                </button>
+              </div>
+            )}
+
+            {/* Visningsvalg */}
+            <div className="bg-purple-50 rounded-full p-1 inline-flex">
+              <button
+                onClick={() => setView("day")}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition ${
+                  view === "day" ? "bg-white text-purple-900 shadow-sm" : "text-purple-500"
+                }`}
+              >
+                Dag
+              </button>
+              <button
+                onClick={() => setView("week")}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition ${
+                  view === "week" ? "bg-white text-purple-900 shadow-sm" : "text-purple-500"
+                }`}
+              >
+                Uke
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -303,7 +364,10 @@ export default function DagsplanPage() {
                   dateIso={viewedDate}
                   isToday={viewedDate === realToday}
                   nowX={nowX}
-                  hours={hours}
+                  pxPerHour={pxPerHour}
+                  tick={tick}
+                  showMinorLabels={showMinorLabels}
+                  timelineWidth={timelineWidth}
                   getTasksForKidOnDate={getTasksForKidOnDate}
                   busy={busy}
                   onClaim={claimTask}
@@ -344,7 +408,10 @@ function DayGrid({
   dateIso,
   isToday,
   nowX,
-  hours,
+  pxPerHour,
+  tick,
+  showMinorLabels,
+  timelineWidth,
   getTasksForKidOnDate,
   busy,
   onClaim,
@@ -354,15 +421,29 @@ function DayGrid({
   dateIso: string;
   isToday: boolean;
   nowX: number | null;
-  hours: number[];
+  pxPerHour: number;
+  tick: number;
+  showMinorLabels: boolean;
+  timelineWidth: number;
   getTasksForKidOnDate: (kid: Profile, dateIso: string) => TaskWithState[];
   busy: string | null;
   onClaim: (task: TaskWithState, kid: Profile, dateIso: string) => void;
   onUnclaim: (completionId: string) => void;
 }) {
+  const ticks = useMemo(
+    () => buildTicks(tick, showMinorLabels),
+    [tick, showMinorLabels]
+  );
+  const tickLeft = (t: Tick) => (t.min / 60 - START_HOUR) * pxPerHour;
+  const tickLineClass: Record<Tick["kind"], string> = {
+    hour: "border-l border-purple-200",
+    half: "border-l border-dashed border-purple-100",
+    quarter: "border-l border-dotted border-purple-50",
+  };
+
   return (
     <div className="overflow-x-auto no-scrollbar border border-purple-100 rounded-3xl bg-white shadow-md">
-      <div style={{ minWidth: GUTTER_WIDTH + ANYTIME_WIDTH + TIMELINE_WIDTH }}>
+      <div style={{ minWidth: GUTTER_WIDTH + ANYTIME_WIDTH + timelineWidth }}>
         {/* Header-rad: klokkeslett */}
         <div
           className="flex bg-gradient-to-b from-purple-50/80 to-white border-b-2 border-purple-100 rounded-t-3xl"
@@ -384,16 +465,24 @@ function DayGrid({
               Når som helst
             </span>
           </div>
-          <div className="relative flex-shrink-0" style={{ width: TIMELINE_WIDTH }}>
-            {hours.map((h) => (
+          <div className="relative flex-shrink-0" style={{ width: timelineWidth }}>
+            {ticks.map((t) => (
               <div
-                key={h}
-                className="absolute top-0 bottom-0 flex items-center border-l border-purple-100"
-                style={{ left: (h - START_HOUR) * PX_PER_HOUR }}
+                key={t.min}
+                className={`absolute top-0 bottom-0 flex items-center ${tickLineClass[t.kind]}`}
+                style={{ left: tickLeft(t) }}
               >
-                <span className="text-xs font-bold text-purple-600 pl-2">
-                  {String(h).padStart(2, "0")}:00
-                </span>
+                {t.label && (
+                  <span
+                    className={
+                      t.kind === "hour"
+                        ? "text-xs font-bold text-purple-600 pl-2"
+                        : "text-[10px] font-semibold text-purple-400 pl-1.5"
+                    }
+                  >
+                    {t.label}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -469,20 +558,13 @@ function DayGrid({
               {/* Tidsrutenett */}
               <div
                 className="relative flex-shrink-0"
-                style={{ width: TIMELINE_WIDTH, minHeight: rowHeight }}
+                style={{ width: timelineWidth, minHeight: rowHeight }}
               >
-                {hours.map((h) => (
+                {ticks.map((t) => (
                   <div
-                    key={`h-${h}`}
-                    className="absolute top-0 bottom-0 border-l border-purple-100"
-                    style={{ left: (h - START_HOUR) * PX_PER_HOUR }}
-                  />
-                ))}
-                {hours.slice(0, -1).map((h) => (
-                  <div
-                    key={`hm-${h}`}
-                    className="absolute top-0 bottom-0 border-l border-dashed border-purple-50"
-                    style={{ left: (h - START_HOUR) * PX_PER_HOUR + PX_PER_HOUR / 2 }}
+                    key={t.min}
+                    className={`absolute top-0 bottom-0 ${tickLineClass[t.kind]}`}
+                    style={{ left: tickLeft(t) }}
                   />
                 ))}
 
@@ -498,14 +580,14 @@ function DayGrid({
                 {placed.map(({ task, lane, startMin }) => {
                   const widthPx = Math.max(
                     MIN_CHIP_WIDTH,
-                    (task.duration_minutes / 60) * PX_PER_HOUR - 4
+                    (task.duration_minutes / 60) * pxPerHour - 4
                   );
                   return (
                     <div
                       key={task.id}
                       className="absolute"
                       style={{
-                        left: (startMin / 60 - START_HOUR) * PX_PER_HOUR + 3,
+                        left: (startMin / 60 - START_HOUR) * pxPerHour + 3,
                         top: ROW_PADDING + lane * (LANE_HEIGHT + LANE_GAP),
                         width: widthPx,
                         height: LANE_HEIGHT,
