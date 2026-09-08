@@ -21,11 +21,11 @@ const TIMELINE_WIDTH = (END_HOUR - START_HOUR) * PX_PER_HOUR;
 const GUTTER_WIDTH = 160;
 const ANYTIME_WIDTH = 128;
 const HEADER_HEIGHT = 44;
-const LANE_HEIGHT = 42;
-const LANE_GAP = 6;
-const MIN_CHIP_WIDTH = 78;
-const ROW_PADDING = 14;
-const ROW_MIN_HEIGHT = 84;
+const LANE_HEIGHT = 66;
+const LANE_GAP = 10;
+const MIN_CHIP_WIDTH = 90;
+const ROW_PADDING = 18;
+const ROW_MIN_HEIGHT = 104;
 
 const DAY_SHORT = ["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"];
 
@@ -508,6 +508,7 @@ function DayGrid({
                         left: (startMin / 60 - START_HOUR) * PX_PER_HOUR + 3,
                         top: ROW_PADDING + lane * (LANE_HEIGHT + LANE_GAP),
                         width: widthPx,
+                        height: LANE_HEIGHT,
                       }}
                     >
                       <TaskChip
@@ -692,7 +693,7 @@ function TaskChip({
       style={{
         background: `${task.color}${bgAlpha}`,
         borderLeft: `4px solid ${task.color}`,
-        minHeight: fullWidth ? undefined : LANE_HEIGHT,
+        height: fullWidth ? undefined : LANE_HEIGHT,
       }}
       title={`${task.title}${task.due_time ? " · " + task.due_time.slice(0, 5) : ""} · ${task.duration_minutes} min`}
     >
