@@ -330,6 +330,12 @@ function ChildPage() {
           </button>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => router.push("/dagsplan")}
+              className="text-white/80 text-sm font-semibold bg-white/20 backdrop-blur px-3 py-1.5 rounded-full"
+            >
+              🗓️ Plan
+            </button>
+            <button
               onClick={() => router.push(`/barn/statistikk?p=${profile.id}`)}
               className="text-white/80 text-sm font-semibold bg-white/20 backdrop-blur px-3 py-1.5 rounded-full"
             >

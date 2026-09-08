@@ -16,8 +16,9 @@ const PRIMARY_NAV = [
 ];
 
 const SECONDARY_NAV = [
+  { href: "/dagsplan", label: "Dagsplan", icon: "🗓️" },
   { href: "/forelder/perioder", label: "Perioder", icon: "📅" },
-  { href: "/forelder/streak", label: "Streak", icon: "🔥" },
+  { href: "/forelder/strekk", label: "Streak", icon: "🔥" },
   { href: "/forelder/statistikk", label: "Statistikk", icon: "📊" },
   { href: "/forelder/profiler", label: "Profiler", icon: "👥" },
   { href: "/forelder/oppgrader", label: "Oppgrader", icon: "💎" },

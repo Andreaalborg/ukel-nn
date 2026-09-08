@@ -70,6 +70,7 @@ export type Task = {
   interval_days: number | null;
   start_date: string | null;
   end_date: string | null;
+  due_time: string | null;
   xp_value: number;
   assigned_to: string | null;
   active: boolean;
