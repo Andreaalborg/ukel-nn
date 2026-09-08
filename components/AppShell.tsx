@@ -14,7 +14,7 @@ export const PRIMARY_NAV = [
 ];
 
 export const SECONDARY_NAV = [
-  { href: "/dagsplan", label: "Dagsplan", icon: "🗓️" },
+  { href: "/forelder/dagsplan", label: "Dagsplan", icon: "🗓️" },
   { href: "/forelder/perioder", label: "Perioder", icon: "📅" },
   { href: "/forelder/strekk", label: "Streak", icon: "🔥" },
   { href: "/forelder/statistikk", label: "Statistikk", icon: "📊" },
