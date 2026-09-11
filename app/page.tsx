@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { isSupabaseConfigured, supabase, getCurrentHouseholdId, setCurrentHouseholdId } from "@/lib/supabase";
-import { setActiveProfile } from "@/lib/auth";
+import { PROFILE_SAFE_COLUMNS, setProfileSession } from "@/lib/auth";
 import type { Profile } from "@/lib/types";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import PinPad from "@/components/PinPad";
@@ -49,9 +49,10 @@ export default function Home() {
     const useHid = hid && memberIds.includes(hid) ? hid : memberIds[0];
 
     // 3) Hent profiler
+    // Aldri SELECT pin / pin_hash — kun trygge kolonner for picker
     const { data, error } = await supabase
       .from("profiles")
-      .select("*")
+      .select(PROFILE_SAFE_COLUMNS)
       .eq("household_id", useHid)
       .order("sort_order");
 
@@ -86,18 +87,30 @@ export default function Home() {
   }, [session, sessionLoading, router, loadProfiles]);
 
   const handlePin = useCallback(
-    (pin: string) => {
+    async (pin: string) => {
       if (!selected) return;
-      if (pin === selected.pin) {
-        setActiveProfile(selected);
-        setCurrentHouseholdId(selected.household_id);
-        if (selected.role === "parent") router.push("/forelder");
-        else router.push(`/barn?p=${selected.id}`);
-      } else {
-        setPinError("Feil PIN-kode, prøv igjen");
+      const { data, error } = await supabase.rpc("verify_profile_pin", {
+        p_profile_id: selected.id,
+        p_pin: pin,
+      });
+      if (error || !data) {
+        setPinError(error?.message?.includes("Feil PIN") ? "Feil PIN-kode, prøv igjen" : (error?.message ?? "Kunne ikke låse opp"));
         setResetPin((r) => r + 1);
         setTimeout(() => setPinError(null), 1500);
+        return;
       }
+      const session = data as {
+        session_token: string;
+        profile_id: string;
+        role: string;
+        name: string;
+        household_id: string;
+        expires_at: string;
+      };
+      setProfileSession(session);
+      setCurrentHouseholdId(session.household_id);
+      if (session.role === "parent") router.push("/forelder");
+      else router.push(`/barn?p=${session.profile_id}`);
     },
     [selected, router]
   );

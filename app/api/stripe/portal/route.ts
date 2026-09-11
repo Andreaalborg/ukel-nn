@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { assertParentSessionFromRequest } from "@/lib/assertParentSession";
 import { stripe } from "@/lib/stripe";
 
 /**
  * Oppretter en Stripe Customer Portal-session.
  * Brukeren får selv håndtere abonnement, betalingsmetode, fakturaer, oppsigelse.
+ * Krever ulåst forelder-profil (X-Profile-Session).
  */
 export async function POST(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,6 +29,16 @@ export async function POST(request: Request) {
   const { data: userData, error: userErr } = await admin.auth.getUser(accessToken);
   if (userErr || !userData.user) {
     return NextResponse.json({ error: "Ugyldig sesjon" }, { status: 401 });
+  }
+
+  const parentGate = await assertParentSessionFromRequest(
+    request,
+    supabaseUrl,
+    serviceKey,
+    accessToken
+  );
+  if (!parentGate.ok) {
+    return NextResponse.json({ error: parentGate.error }, { status: parentGate.status });
   }
 
   const { data: members } = await admin

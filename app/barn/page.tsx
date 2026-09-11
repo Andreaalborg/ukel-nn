@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, isSupabaseConfigured, getCurrentHouseholdId } from "@/lib/supabase";
-import { clearActiveProfile, getActiveProfile } from "@/lib/auth";
+import { clearProfileSession, getActiveProfile, PROFILE_SAFE_COLUMNS } from "@/lib/auth";
 import { useSession } from "@/lib/useSession";
 import type {
   Bonus,
@@ -70,11 +70,16 @@ function ChildPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [showLevels, setShowLevels] = useState(false);
 
+  // Kun sesjonens profil — ignorer / overstyr ?p= hvis den ikke matcher
   const profileId = useMemo(() => {
-    const fromQuery = search.get("p");
-    if (fromQuery) return fromQuery;
     const active = getActiveProfile();
-    return active?.id ?? null;
+    if (!active || active.role !== "child") return null;
+    const fromQuery = search.get("p");
+    if (fromQuery && fromQuery !== active.id) {
+      // Sibling switch blocked — stick to unlocked child
+      return active.id;
+    }
+    return active.id;
   }, [search]);
 
   const loadAll = useCallback(async () => {
@@ -82,7 +87,7 @@ function ChildPage() {
     const hid = await getCurrentHouseholdId();
     setHouseholdId(hid);
     const [pRes, tRes, cRes, bRes, bcRes, perRes, aRes, srRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", profileId).single(),
+      supabase.from("profiles").select(PROFILE_SAFE_COLUMNS).eq("id", profileId).single(),
       supabase.from("tasks").select("*").eq("active", true).order("sort_order"),
       supabase
         .from("task_completions")
@@ -124,8 +129,13 @@ function ChildPage() {
       router.replace("/");
       return;
     }
+    const q = search.get("p");
+    if (q && q !== profileId) {
+      router.replace(`/barn?p=${profileId}`);
+      return;
+    }
     loadAll();
-  }, [profileId, loadAll, router, session, sessionLoading]);
+  }, [profileId, loadAll, router, session, sessionLoading, search]);
 
   const today = todayIso();
   const weekStart = startOfWeek().toISOString().slice(0, 10);
@@ -320,8 +330,8 @@ function ChildPage() {
       >
         <div className="flex items-start justify-between mb-4">
           <button
-            onClick={() => {
-              clearActiveProfile();
+            onClick={async () => {
+              await clearProfileSession();
               router.push("/");
             }}
             className="text-white/80 text-sm font-semibold bg-white/20 backdrop-blur px-3 py-1.5 rounded-full"

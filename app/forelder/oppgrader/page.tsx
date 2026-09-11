@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import { getProfileSessionToken } from "@/lib/auth";
 
 type Billing = "monthly" | "yearly";
 type Plan = "family_monthly" | "family_yearly" | "lifetime";
@@ -33,11 +34,18 @@ export default function OppgraderPage() {
     }
 
     try {
+      const profileToken = getProfileSessionToken();
+      if (!profileToken) {
+        setError("Lås opp forelder-profil med PIN først");
+        setBusyPlan(null);
+        return;
+      }
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
+          "X-Profile-Session": profileToken,
         },
         body: JSON.stringify({ plan }),
       });

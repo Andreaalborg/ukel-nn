@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { assertParentSessionFromRequest } from "@/lib/assertParentSession";
 import { stripe, STRIPE_PRICES, type PlanKey } from "@/lib/stripe";
 
 /**
@@ -45,6 +46,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ugyldig sesjon" }, { status: 401 });
   }
   const user = userData.user;
+
+  const parentGate = await assertParentSessionFromRequest(
+    request,
+    supabaseUrl,
+    serviceKey,
+    accessToken
+  );
+  if (!parentGate.ok) {
+    return NextResponse.json({ error: parentGate.error }, { status: parentGate.status });
+  }
 
   // Hent husholdningen (eieren)
   const { data: members } = await admin

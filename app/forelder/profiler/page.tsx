@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured, getCurrentHouseholdId } from "@/lib/supabase";
+import { PROFILE_SAFE_COLUMNS } from "@/lib/auth";
 import type { Profile, Role } from "@/lib/types";
 import { ColorPicker, EmojiPicker } from "@/components/EmojiPicker";
 import ProfileAvatar from "@/components/ProfileAvatar";
@@ -38,7 +39,7 @@ export default function ProfilesPage() {
   const reload = useCallback(async () => {
     const hid = await getCurrentHouseholdId();
     setHouseholdId(hid);
-    const { data } = await supabase.from("profiles").select("*").order("sort_order");
+    const { data } = await supabase.from("profiles").select(PROFILE_SAFE_COLUMNS).order("sort_order");
     setProfiles((data as Profile[]) ?? []);
     setLoading(false);
   }, []);
@@ -76,8 +77,13 @@ function ProfilesContent({
 
   const save = async () => {
     if (!editing || !editing.name.trim() || !householdId) return;
-    if (!/^\d{4,6}$/.test(editing.pin)) {
+    const pinProvided = editing.pin.length > 0;
+    if (pinProvided && !/^\d{4,6}$/.test(editing.pin)) {
       alert("PIN må være 4-6 sifre");
+      return;
+    }
+    if (!editing.id && !pinProvided) {
+      alert("Ny profil trenger en PIN (4-6 sifre)");
       return;
     }
     // Sjekk gating: hvis ny barneprofil og ikke premium, kan vi ikke legge til over grensen
@@ -90,21 +96,22 @@ function ProfilesContent({
       alert(`Gratis-grense på ${FREE_LIMITS.maxKids} barn — oppgrader for flere.`);
       return;
     }
-    const payload = {
+    const payload: Record<string, unknown> = {
       household_id: householdId,
       name: editing.name.trim(),
       role: editing.role,
-      pin: editing.pin,
       avatar_color: editing.avatar_color,
       avatar_emoji: editing.avatar_emoji,
       birthdate: editing.birthdate || null,
     };
+    // pin er write-only: trigger hasher til pin_hash og nuller plaintext
+    if (pinProvided) payload.pin = editing.pin;
     if (editing.id) {
       await supabase.from("profiles").update(payload).eq("id", editing.id);
     } else {
       await supabase
         .from("profiles")
-        .insert({ ...payload, sort_order: profiles.length });
+        .insert({ ...payload, pin: editing.pin, sort_order: profiles.length });
     }
     setEditing(null);
     reload();
@@ -157,7 +164,7 @@ function ProfilesContent({
               <div className="flex-1 min-w-0">
                 <div className="font-extrabold text-purple-900 text-lg">{p.name}</div>
                 <div className="text-sm text-purple-500">
-                  {p.role === "parent" ? "👑 Voksen" : "🎮 Barn"} · PIN: <span className="font-mono">{p.pin}</span>
+                  {p.role === "parent" ? "👑 Voksen" : "🎮 Barn"} · PIN: <span className="font-mono">••••</span>
                 </div>
               </div>
               <button
@@ -166,7 +173,7 @@ function ProfilesContent({
                     id: p.id,
                     name: p.name,
                     role: p.role,
-                    pin: p.pin,
+                    pin: "",
                     avatar_color: p.avatar_color,
                     avatar_emoji: p.avatar_emoji,
                     birthdate: p.birthdate ?? "",
@@ -222,13 +229,16 @@ function ProfilesContent({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold text-purple-700 mb-1">PIN (4-6 siffer)</label>
+                <label className="block text-sm font-bold text-purple-700 mb-1">
+                  PIN (4-6 siffer){editing.id ? " — tom = behold" : ""}
+                </label>
                 <input
-                  type="text"
+                  type="password"
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={6}
                   value={editing.pin}
+                  placeholder={editing.id ? "••••" : ""}
                   onChange={(e) => setEditing({ ...editing, pin: e.target.value.replace(/\D/g, "") })}
                   className="w-full px-3 py-2 rounded-xl border-2 border-purple-200 outline-none font-mono"
                 />

@@ -24,8 +24,9 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
         router.replace("/onboarding");
         return;
       }
+      // Krever aktiv forelder-sesjon (ikke bare «ikke barn» / manglende profil)
       const active = getActiveProfile();
-      if (active && active.role !== "parent") {
+      if (!active || active.role !== "parent") {
         router.replace("/");
         return;
       }

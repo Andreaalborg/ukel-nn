@@ -6,7 +6,7 @@ import type { Payout, Profile } from "@/lib/types";
 import { formatKr, kronerToOre } from "@/lib/utils";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import SetupNotice from "@/components/SetupNotice";
-import { getActiveProfile } from "@/lib/auth";
+import { getProfileSessionToken, PROFILE_SAFE_COLUMNS } from "@/lib/auth";
 
 export default function PayoutsPage() {
   const [kids, setKids] = useState<Profile[]>([]);
@@ -19,7 +19,7 @@ export default function PayoutsPage() {
     const hid = await getCurrentHouseholdId();
     setHouseholdId(hid);
     const [kRes, hRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
+      supabase.from("profiles").select(PROFILE_SAFE_COLUMNS).eq("role", "child").order("sort_order"),
       supabase.from("payouts").select("*").order("paid_at", { ascending: false }).limit(20),
     ]);
     setKids((kRes.data as Profile[]) ?? []);
@@ -38,15 +38,21 @@ export default function PayoutsPage() {
   const handlePayout = async () => {
     if (!confirming || !householdId) return;
     const { kid, amount, note } = confirming;
-    const parent = getActiveProfile();
-    await supabase.from("payouts").insert({
-      household_id: householdId,
-      child_id: kid.id,
-      amount_ore: amount,
-      note: note || null,
-      paid_by: parent?.id ?? null,
+    const token = getProfileSessionToken();
+    if (!token) {
+      alert("Forelder-sesjon mangler — lås opp med PIN på nytt.");
+      return;
+    }
+    const { error } = await supabase.rpc("create_payout", {
+      p_token: token,
+      p_child_id: kid.id,
+      p_amount_ore: amount,
+      p_note: note || null,
     });
-    await supabase.from("profiles").update({ balance_ore: kid.balance_ore - amount }).eq("id", kid.id);
+    if (error) {
+      alert(error.message ?? "Utbetaling feilet");
+      return;
+    }
     setConfirming(null);
     reload();
   };

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { assertParentSessionFromRequest } from "@/lib/assertParentSession";
 
 /**
  * Sletter alt:
  *  - Husholdningen (cascade fjerner alle relaterte tabeller)
  *  - Brukerens Supabase Auth-konto
  *
- * Krever at brukeren er innlogget (sender med Bearer-token i Authorization-header).
+ * Krever Bearer-token + ulåst forelder-profil (X-Profile-Session).
  * Krever at SUPABASE_SERVICE_ROLE_KEY er satt som server-side env-variabel (IKKE eksponert).
  */
 export async function POST(request: Request) {
@@ -26,17 +27,25 @@ export async function POST(request: Request) {
   }
   const accessToken = authHeader.slice("Bearer ".length);
 
-  // Bruk en klient med service role for å verifisere brukeren og slette
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Hent brukeren basert på access token
   const { data: userData, error: userErr } = await admin.auth.getUser(accessToken);
   if (userErr || !userData.user) {
     return NextResponse.json({ error: "Ugyldig sesjon" }, { status: 401 });
   }
   const userId = userData.user.id;
+
+  const parentGate = await assertParentSessionFromRequest(
+    request,
+    supabaseUrl,
+    serviceKey,
+    accessToken
+  );
+  if (!parentGate.ok) {
+    return NextResponse.json({ error: parentGate.error }, { status: parentGate.status });
+  }
 
   // 1) Slett husholdningen (vil cascade) via en bruker-skoped klient så RPC har auth.uid()
   const userClient = createClient(supabaseUrl, serviceKey, {
@@ -45,7 +54,6 @@ export async function POST(request: Request) {
   });
   const { error: rpcErr } = await userClient.rpc("delete_my_household");
   if (rpcErr && !rpcErr.message?.includes("Ingen husholdning")) {
-    // Hvis brukeren ikke har en husholdning er det greit — vi fortsetter til auth-sletting
     return NextResponse.json({ error: rpcErr.message }, { status: 500 });
   }
 
