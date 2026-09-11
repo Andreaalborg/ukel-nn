@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, isSupabaseConfigured, getCurrentHouseholdId } from "@/lib/supabase";
 import { useSession } from "@/lib/useSession";
-import { getActiveProfile } from "@/lib/auth";
+import {getActiveProfile, PROFILE_SAFE_COLUMNS} from "@/lib/auth";
 import type { Profile, Task, TaskCompletion } from "@/lib/types";
 import { addDaysIso, dateToIso, formatKr, startOfWeek, todayIso } from "@/lib/utils";
 import { getTaskState } from "@/lib/scheduling";
@@ -98,7 +98,7 @@ export default function DagsplanView({ embedded = false }: { embedded?: boolean 
       return;
     }
     const [kRes, tRes, cRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
+      supabase.from("profiles").select(PROFILE_SAFE_COLUMNS).eq("role", "child").order("sort_order"),
       supabase.from("tasks").select("*").eq("active", true).order("sort_order"),
       supabase.from("task_completions").select("*"),
     ]);
