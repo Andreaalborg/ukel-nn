@@ -117,8 +117,9 @@ create or replace function _hash_session_token(p_token text)
 returns text
 language sql
 immutable
+set search_path = public, extensions
 as $$
-  select encode(digest(convert_to(p_token, 'UTF8'), 'sha256'::text), 'hex');
+  select encode(digest(convert_to(p_token, 'UTF8'), 'sha256'), 'hex');
 $$;
 
 create or replace function _lookup_profile_session(p_token text)
