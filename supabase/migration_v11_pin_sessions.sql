@@ -30,11 +30,11 @@ where pin is not null
   and pin <> ''
   and (pin_hash is null or pin_hash = '');
 
+-- Allow null pin BEFORE clearing plaintext (pin was NOT NULL historically)
+alter table profiles alter column pin drop not null;
+
 -- Clear plaintext after backfill (safe once app uses pin_hash / RPC)
 update profiles set pin = null where pin is not null;
-
--- Allow null pin going forward (hash is source of truth)
-alter table profiles alter column pin drop not null;
 
 -- Trigger: when client writes pin (onboarding / profiler), hash then clear plaintext
 create or replace function profiles_hash_pin()
