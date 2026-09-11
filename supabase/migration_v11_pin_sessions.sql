@@ -118,7 +118,7 @@ returns text
 language sql
 immutable
 as $$
-  select encode(digest(convert_to(p_token, 'UTF8'), 'sha256'), 'hex');
+  select encode(digest(convert_to(p_token, 'UTF8'), 'sha256'::text), 'hex');
 $$;
 
 create or replace function _lookup_profile_session(p_token text)
