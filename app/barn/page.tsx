@@ -328,16 +328,25 @@ function ChildPage() {
           background: `linear-gradient(135deg, ${profile.avatar_color}, #8b5cf6 100%)`,
         }}
       >
-        <div className="flex items-start justify-between mb-4">
-          <button
-            onClick={async () => {
-              await clearProfileSession();
-              router.push("/");
-            }}
-            className="text-white/80 text-sm font-semibold bg-white/20 backdrop-blur px-3 py-1.5 rounded-full"
-          >
-            ← Bytt
-          </button>
+        <div className="flex items-start justify-between mb-4 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="bg-white/20 backdrop-blur rounded-full pl-3 pr-1 py-1 flex items-center gap-2 border border-white/25">
+              <div className="min-w-0">
+                <div className="text-xs font-extrabold truncate">{profile.name}</div>
+                <div className="text-[9px] font-bold uppercase tracking-wide opacity-80 leading-none">Ulåst · Barn</div>
+              </div>
+              <button
+                onClick={async () => {
+                  await clearProfileSession();
+                  router.push("/");
+                }}
+                className="shrink-0 text-sm font-bold bg-white/25 hover:bg-white/35 px-3 py-1.5 rounded-full"
+                aria-label="Bytt profil"
+              >
+                Bytt
+              </button>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/dagsplan")}
