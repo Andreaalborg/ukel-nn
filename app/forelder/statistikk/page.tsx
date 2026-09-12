@@ -7,6 +7,7 @@ import { formatKr, startOfMonth, startOfWeek, todayIso } from "@/lib/utils";
 import { xpForTask } from "@/lib/levels";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import SetupNotice from "@/components/SetupNotice";
+import { PROFILE_SAFE_COLUMNS } from "@/lib/auth";
 
 export default function StatsPage() {
   const [kids, setKids] = useState<Profile[]>([]);
@@ -17,7 +18,7 @@ export default function StatsPage() {
 
   const reload = useCallback(async () => {
     const [kRes, tRes, cRes, aRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
+      supabase.from("profiles").select(PROFILE_SAFE_COLUMNS).eq("role", "child").order("sort_order"),
       supabase.from("tasks").select("*"),
       supabase.from("task_completions").select("*").eq("status", "approved"),
       supabase.from("period_achievements").select("*").order("period_end", { ascending: false }),

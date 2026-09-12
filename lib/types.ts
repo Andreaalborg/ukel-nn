@@ -47,7 +47,8 @@ export type Profile = {
   household_id: string;
   name: string;
   role: Role;
-  pin: string;
+  /** @deprecated Never returned to clients after v11; write-only via insert/update trigger → pin_hash */
+  pin?: string | null;
   avatar_color: string;
   avatar_emoji: string;
   birthdate: string | null;

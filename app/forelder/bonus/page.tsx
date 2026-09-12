@@ -8,6 +8,7 @@ import { getCurrentPeriod } from "@/lib/periods";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import SetupNotice from "@/components/SetupNotice";
 import { AnimatePresence, motion } from "framer-motion";
+import { PROFILE_SAFE_COLUMNS } from "@/lib/auth";
 
 type Draft = {
   id?: string;
@@ -54,7 +55,7 @@ export default function BonusPage() {
     setHouseholdId(hid);
     const [bRes, kRes, cRes, clRes, pRes] = await Promise.all([
       supabase.from("bonuses").select("*").order("created_at", { ascending: false }),
-      supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
+      supabase.from("profiles").select(PROFILE_SAFE_COLUMNS).eq("role", "child").order("sort_order"),
       supabase.from("task_completions").select("child_id, reward_ore, completion_date, status").eq("status", "approved"),
       supabase.from("bonus_claims").select("id, bonus_id, child_id, claimed_at, status"),
       supabase.from("custody_periods").select("*"),

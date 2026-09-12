@@ -10,6 +10,7 @@ import SetupNotice from "@/components/SetupNotice";
 import { UpgradePrompt, PremiumLockBadge } from "@/components/PremiumGate";
 import { usePremium, FREE_LIMITS } from "@/lib/usePremium";
 import { AnimatePresence, motion } from "framer-motion";
+import { PROFILE_SAFE_COLUMNS } from "@/lib/auth";
 
 type Draft = {
   id?: string;
@@ -61,7 +62,7 @@ export default function TasksPage() {
     setHouseholdId(hid);
     const [tRes, kRes] = await Promise.all([
       supabase.from("tasks").select("*").order("sort_order"),
-      supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
+      supabase.from("profiles").select(PROFILE_SAFE_COLUMNS).eq("role", "child").order("sort_order"),
     ]);
     setTasks((tRes.data as Task[]) ?? []);
     setKids((kRes.data as Profile[]) ?? []);

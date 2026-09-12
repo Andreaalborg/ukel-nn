@@ -17,7 +17,7 @@ import { getCurrentPeriod, isDateInWindow } from "@/lib/periods";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import XpBar from "@/components/XpBar";
 import SetupNotice from "@/components/SetupNotice";
-import { getActiveProfile } from "@/lib/auth";
+import {getActiveProfile, PROFILE_SAFE_COLUMNS} from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
 
 type PendingCompletionRow = TaskCompletion & {
@@ -51,7 +51,7 @@ export default function ParentHome() {
   const reload = useCallback(async () => {
     const [kidsRes, tasksRes, pendingRes, bonusRes, completionsRes, perRes, achRes, srRes] =
       await Promise.all([
-        supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
+        supabase.from("profiles").select(PROFILE_SAFE_COLUMNS).eq("role", "child").order("sort_order"),
         supabase.from("tasks").select("*"),
         supabase
           .from("task_completions")

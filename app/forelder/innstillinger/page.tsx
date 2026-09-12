@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, isSupabaseConfigured, getCurrentHouseholdId } from "@/lib/supabase";
 import { useSession } from "@/lib/useSession";
-import { logout, clearActiveProfile } from "@/lib/auth";
+import { logout, clearActiveProfile, getProfileSessionToken } from "@/lib/auth";
 import { clearCurrentHouseholdId } from "@/lib/supabase";
 import SetupNotice from "@/components/SetupNotice";
 import { UpgradePrompt, PremiumLockBadge } from "@/components/PremiumGate";
@@ -144,11 +144,15 @@ export default function SettingsPage() {
       } = await supabase.auth.getSession();
       if (!currentSession) throw new Error("Ikke innlogget");
 
+      const profileToken = getProfileSessionToken();
+      if (!profileToken) throw new Error("Lås opp forelder-profil med PIN først");
+
       const res = await fetch("/api/account/delete", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${currentSession.access_token}`,
           "Content-Type": "application/json",
+          "X-Profile-Session": profileToken,
         },
       });
       const result = await res.json();
@@ -480,9 +484,18 @@ function SubscriptionCard({ household }: { household: Household }) {
       setPortalBusy(false);
       return;
     }
+    const profileToken = getProfileSessionToken();
+    if (!profileToken) {
+      setPortalBusy(false);
+      alert("Lås opp forelder-profil med PIN først");
+      return;
+    }
     const res = await fetch("/api/stripe/portal", {
       method: "POST",
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "X-Profile-Session": profileToken,
+      },
     });
     const result = await res.json();
     setPortalBusy(false);

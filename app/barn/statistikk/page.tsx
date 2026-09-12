@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { getActiveProfile } from "@/lib/auth";
+import { getActiveProfile, PROFILE_SAFE_COLUMNS } from "@/lib/auth";
 import { useSession } from "@/lib/useSession";
 import type { PeriodAchievement, Profile, Task, TaskCompletion } from "@/lib/types";
 import { formatKr, startOfWeek, todayIso } from "@/lib/utils";
@@ -31,15 +31,15 @@ function ChildStatsPage() {
   const [loading, setLoading] = useState(true);
 
   const profileId = useMemo(() => {
-    const q = search.get("p");
-    if (q) return q;
-    return getActiveProfile()?.id ?? null;
+    const active = getActiveProfile();
+    if (!active || active.role !== "child") return null;
+    return active.id;
   }, [search]);
 
   const reload = useCallback(async () => {
     if (!profileId) return;
     const [pRes, tRes, cRes, aRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", profileId).single(),
+      supabase.from("profiles").select(PROFILE_SAFE_COLUMNS).eq("id", profileId).single(),
       supabase.from("tasks").select("*"),
       supabase
         .from("task_completions")
@@ -73,8 +73,13 @@ function ChildStatsPage() {
       router.replace("/");
       return;
     }
+    const q = search.get("p");
+    if (q && q !== profileId) {
+      router.replace(`/barn/statistikk?p=${profileId}`);
+      return;
+    }
     reload();
-  }, [profileId, reload, router, session, sessionLoading]);
+  }, [profileId, reload, router, session, sessionLoading, search]);
 
   const today = todayIso();
 

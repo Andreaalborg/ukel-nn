@@ -10,6 +10,7 @@ import ProfileAvatar from "@/components/ProfileAvatar";
 import SetupNotice from "@/components/SetupNotice";
 import PremiumGate from "@/components/PremiumGate";
 import { AnimatePresence, motion } from "framer-motion";
+import { PROFILE_SAFE_COLUMNS } from "@/lib/auth";
 
 type Draft = {
   id?: string;
@@ -45,7 +46,7 @@ function PeriodsPage() {
     const hid = await getCurrentHouseholdId();
     setHouseholdId(hid);
     const [kRes, pRes, aRes, tRes, cRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("role", "child").order("sort_order"),
+      supabase.from("profiles").select(PROFILE_SAFE_COLUMNS).eq("role", "child").order("sort_order"),
       supabase.from("custody_periods").select("*").order("start_date", { ascending: false }),
       supabase.from("period_achievements").select("*").order("period_end", { ascending: false }),
       supabase.from("tasks").select("*"),

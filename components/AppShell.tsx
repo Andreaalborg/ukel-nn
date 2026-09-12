@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { clearActiveProfile, logout } from "@/lib/auth";
+import { clearProfileSession, logout } from "@/lib/auth";
 import MoreMenu from "@/components/MoreMenu";
 
 export const PRIMARY_NAV = [
@@ -46,8 +46,8 @@ export default function AppShell({
     router.push("/auth/signin");
   };
 
-  const handleSwitchProfile = () => {
-    clearActiveProfile();
+  const handleSwitchProfile = async () => {
+    await clearProfileSession();
     router.push("/");
   };
 
