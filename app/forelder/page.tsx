@@ -55,12 +55,12 @@ export default function ParentHome() {
         supabase.from("tasks").select("*"),
         supabase
           .from("task_completions")
-          .select("*, tasks(*), profiles!task_completions_child_id_fkey(*)")
+          .select("*, tasks(*), profiles!task_completions_child_id_fkey(id, name, role, avatar_color, avatar_emoji, balance_ore)")
           .eq("status", "pending")
           .order("completed_at"),
         supabase
           .from("bonus_claims")
-          .select("*, profiles!bonus_claims_child_id_fkey(*), bonuses(title, icon)")
+          .select("*, profiles!bonus_claims_child_id_fkey(id, name, role, avatar_color, avatar_emoji, balance_ore), bonuses(title, icon)")
           .eq("status", "pending")
           .order("claimed_at"),
         supabase
@@ -141,75 +141,10 @@ export default function ParentHome() {
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-extrabold text-purple-900">{greeting()}! 👋</h1>
-        <p className="text-purple-600 font-medium">Her er familieoversikten</p>
+        <p className="text-purple-600 font-medium">Godkjenn først — deretter oversikt</p>
       </header>
 
-      {/* Kid stats */}
-      <section className="grid sm:grid-cols-2 gap-4">
-        {kids.map((kid) => {
-          const period = getCurrentPeriod(periods, kid.id);
-          const inPeriod = (c: TaskCompletion) =>
-            isDateInWindow(c.completion_date, period);
-          const todayKr = completions
-            .filter((c) => c.child_id === kid.id && c.completion_date === today)
-            .reduce((s, c) => s + c.reward_ore, 0);
-          const periodKr = completions
-            .filter((c) => c.child_id === kid.id && inPeriod(c))
-            .reduce((s, c) => s + c.reward_ore, 0);
-          const periodXp = completions
-            .filter((c) => c.child_id === kid.id && inPeriod(c))
-            .reduce((s, c) => {
-              const t = tasks.find((x) => x.id === c.task_id);
-              return s + xpForTask(t ?? { xp_value: 10 });
-            }, 0);
-          let streak = 0;
-          for (const a of achievements.filter((a) => a.child_id === kid.id)) {
-            if (a.reached_max) streak++;
-            else break;
-          }
-          if (getLevel(periodXp).isMax) streak += 1;
-          return (
-            <div key={kid.id} className="card p-5">
-              <div className="flex items-center gap-3 mb-3">
-                <ProfileAvatar
-                  emoji={kid.avatar_emoji}
-                  color={kid.avatar_color}
-                  size="md"
-                />
-                <div className="flex-1">
-                  <div className="font-extrabold text-purple-900 text-xl">{kid.name}</div>
-                  <div className="text-sm text-purple-500 font-medium">Saldo</div>
-                  <div className="text-2xl font-extrabold text-purple-900">
-                    {formatKr(kid.balance_ore)}
-                  </div>
-                </div>
-                {streak > 0 && (
-                  <div className="text-center">
-                    <div className="text-2xl">🔥</div>
-                    <div className="text-xs font-extrabold text-orange-600">{streak}</div>
-                  </div>
-                )}
-              </div>
-              <div className="text-[10px] text-purple-500 font-bold mb-1">
-                📅 {period.label}
-              </div>
-              <XpBar xp={periodXp} color={kid.avatar_color} variant="light" />
-              <div className="grid grid-cols-2 gap-2 mt-3">
-                <div className="bg-purple-50 rounded-xl py-2 text-center">
-                  <div className="text-xs text-purple-500 font-semibold">I dag</div>
-                  <div className="font-extrabold text-purple-900">{formatKr(todayKr)}</div>
-                </div>
-                <div className="bg-purple-50 rounded-xl py-2 text-center">
-                  <div className="text-xs text-purple-500 font-semibold">Perioden</div>
-                  <div className="font-extrabold text-purple-900">{formatKr(periodKr)}</div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </section>
-
-      {/* Pending approvals */}
+      {/* UX #2: godkjenningskø først */}
       <section>
         <h2 className="text-xl font-extrabold text-purple-900 mb-3 flex items-center gap-2">
           ✋ Venter på godkjenning
@@ -342,6 +277,73 @@ export default function ParentHome() {
           </div>
         )}
       </section>
+
+      {/* Kid stats */}
+      <section className="grid sm:grid-cols-2 gap-4">
+        {kids.map((kid) => {
+          const period = getCurrentPeriod(periods, kid.id);
+          const inPeriod = (c: TaskCompletion) =>
+            isDateInWindow(c.completion_date, period);
+          const todayKr = completions
+            .filter((c) => c.child_id === kid.id && c.completion_date === today)
+            .reduce((s, c) => s + c.reward_ore, 0);
+          const periodKr = completions
+            .filter((c) => c.child_id === kid.id && inPeriod(c))
+            .reduce((s, c) => s + c.reward_ore, 0);
+          const periodXp = completions
+            .filter((c) => c.child_id === kid.id && inPeriod(c))
+            .reduce((s, c) => {
+              const t = tasks.find((x) => x.id === c.task_id);
+              return s + xpForTask(t ?? { xp_value: 10 });
+            }, 0);
+          let streak = 0;
+          for (const a of achievements.filter((a) => a.child_id === kid.id)) {
+            if (a.reached_max) streak++;
+            else break;
+          }
+          if (getLevel(periodXp).isMax) streak += 1;
+          return (
+            <div key={kid.id} className="card p-5">
+              <div className="flex items-center gap-3 mb-3">
+                <ProfileAvatar
+                  emoji={kid.avatar_emoji}
+                  color={kid.avatar_color}
+                  size="md"
+                />
+                <div className="flex-1">
+                  <div className="font-extrabold text-purple-900 text-xl">{kid.name}</div>
+                  <div className="text-sm text-purple-500 font-medium">Saldo</div>
+                  <div className="text-2xl font-extrabold text-purple-900">
+                    {formatKr(kid.balance_ore)}
+                  </div>
+                </div>
+                {streak > 0 && (
+                  <div className="text-center">
+                    <div className="text-2xl">🔥</div>
+                    <div className="text-xs font-extrabold text-orange-600">{streak}</div>
+                  </div>
+                )}
+              </div>
+              <div className="text-[10px] text-purple-500 font-bold mb-1">
+                📅 {period.label}
+              </div>
+              <XpBar xp={periodXp} color={kid.avatar_color} variant="light" />
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <div className="bg-purple-50 rounded-xl py-2 text-center">
+                  <div className="text-xs text-purple-500 font-semibold">I dag</div>
+                  <div className="font-extrabold text-purple-900">{formatKr(todayKr)}</div>
+                </div>
+                <div className="bg-purple-50 rounded-xl py-2 text-center">
+                  <div className="text-xs text-purple-500 font-semibold">Perioden</div>
+                  <div className="font-extrabold text-purple-900">{formatKr(periodKr)}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </section>
+
+
     </div>
   );
 }

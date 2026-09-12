@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clearProfileSession, logout } from "@/lib/auth";
 import MoreMenu from "@/components/MoreMenu";
+import UnlockedProfileChip from "@/components/UnlockedProfileChip";
 
 export const PRIMARY_NAV = [
   { href: "/forelder", label: "Hjem", icon: "🏠" },
@@ -63,24 +64,22 @@ export default function AppShell({
       style={{ paddingBottom: "max(6rem, env(safe-area-inset-bottom) + 5rem)" }}
     >
       {/* Mobile top bar — Bytt-knapp synlig */}
-      <header className="sm:hidden sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-purple-100 px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🌟</span>
-          <span className="font-extrabold text-purple-900">Ukeslønn</span>
+      <header className="sm:hidden sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-purple-100 px-4 py-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xl shrink-0">🌟</span>
+          <span className="font-extrabold text-purple-900 truncate">Ukeslønn</span>
         </div>
-        <button
-          onClick={handleSwitchProfile}
-          className="text-purple-600 text-sm font-bold bg-purple-50 px-3 py-1.5 rounded-full"
-        >
-          🔄 Bytt
-        </button>
+        <UnlockedProfileChip onSwitch={handleSwitchProfile} compact />
       </header>
 
       {/* Desktop side nav */}
       <aside className="hidden sm:flex fixed left-0 top-0 bottom-0 w-56 bg-white/80 backdrop-blur border-r border-purple-100 flex-col p-4 z-30">
-        <div className="flex items-center gap-2 mb-6 px-2">
+        <div className="flex items-center gap-2 mb-3 px-2">
           <div className="text-2xl">🌟</div>
           <div className="font-extrabold text-purple-900">Ukeslønn</div>
+        </div>
+        <div className="mb-4 px-1">
+          <UnlockedProfileChip onSwitch={handleSwitchProfile} />
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto">
           {ALL_NAV.map((n) => (
